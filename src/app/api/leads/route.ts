@@ -100,7 +100,10 @@ export async function POST(request: NextRequest) {
     }
 
     const dynamicFieldsConfig = DYNAMIC_FIELDS[applicationType] || [];
-    const requiredFields = dynamicFieldsConfig.filter(f => f.required);
+    const isJuvenileAbuse = applicationType === 'Juvenile Abuse';
+    const requiredFields = isJuvenileAbuse
+      ? dynamicFieldsConfig.filter(f => f.key === 'Location Of Incident')
+      : dynamicFieldsConfig.filter(f => f.required);
     const missingFields = [];
 
     for (const field of requiredFields) {
