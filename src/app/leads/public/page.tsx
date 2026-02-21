@@ -91,7 +91,9 @@ export default function PublicLeadPage() {
 
   const onSubmit = async (values: FormValues) => {
     const requiredDynamicFields =
-      (DYNAMIC_FIELDS[selectedType] || []).filter(f => f.required);
+      selectedType === 'Juvenile Abuse'
+        ? (DYNAMIC_FIELDS[selectedType] || []).filter(f => f.key === 'Location Of Incident')
+        : (DYNAMIC_FIELDS[selectedType] || []).filter(f => f.required);
 
     const missingFields = requiredDynamicFields.filter(
       f => !dynamicFields[f.key]
@@ -149,7 +151,9 @@ export default function PublicLeadPage() {
       <FormItem key={field.key}>
         <FormLabel className="text-sm">
           {field.label}
-          {field.required && '*'}
+          {(selectedType === 'Juvenile Abuse'
+            ? field.key === 'Location Of Incident'
+            : field.required) && '*'}
         </FormLabel>
         <FormControl>
           {field.type === 'textarea' ? (
@@ -165,6 +169,11 @@ export default function PublicLeadPage() {
           ) : (
             <Input
               type={field.type}
+              placeholder={
+                selectedType === 'Juvenile Abuse' && field.key === 'Location Of Incident'
+                  ? 'Enter Juvenile Detention Center (JDC) name'
+                  : undefined
+              }
               value={dynamicFields[field.key] || ''}
               onChange={e =>
                 setDynamicFields(p => ({
