@@ -86,7 +86,10 @@ export default function CreateLeadClient() {
   });
 
   const onSubmit = async (values: FormValues) => {
-    const requiredDynamicFields = (DYNAMIC_FIELDS[selectedType] || []).filter(field => field.required);
+    const requiredDynamicFields =
+      selectedType === 'Juvenile Abuse'
+        ? (DYNAMIC_FIELDS[selectedType] || []).filter(field => field.key === 'Location Of Incident')
+        : (DYNAMIC_FIELDS[selectedType] || []).filter(field => field.required);
     const missingFields = requiredDynamicFields.filter(field => !dynamicFields[field.key]);
 
     if (missingFields.length > 0) {
@@ -125,6 +128,10 @@ export default function CreateLeadClient() {
   const renderDynamicFields = () => {
     const fields = DYNAMIC_FIELDS[selectedType] || [];
     return fields.map(field => {
+      const isRequired =
+        selectedType === 'Juvenile Abuse'
+          ? field.key === 'Location Of Incident'
+          : field.required;
       let inputComponent;
       if (field.type === 'date') {
         inputComponent = (
@@ -134,12 +141,15 @@ export default function CreateLeadClient() {
           />
         );
       } else if (field.type === 'text' || field.type === 'email' || field.type === 'phone') {
+        const placeholder = selectedType === 'Juvenile Abuse' && field.key === 'Location Of Incident'
+          ? 'Enter Juvenile Detention Center (JDC) name'
+          : `Enter ${field.label.toLowerCase()}`;
         inputComponent = (
           <Input
             type={field.type}
             value={dynamicFields[field.key] || ''}
             onChange={e => setDynamicFields(prev => ({ ...prev, [field.key]: e.target.value }))}
-            placeholder={`Enter ${field.label.toLowerCase()}`}
+            placeholder={placeholder}
             className="bg-background"
           />
         );
@@ -175,7 +185,7 @@ export default function CreateLeadClient() {
 
       return (
         <FormItem key={field.key}>
-          <FormLabel className="text-sm">{field.label}{field.required && '*'}</FormLabel>
+          <FormLabel className="text-sm">{field.label}{isRequired && '*'}</FormLabel>
           <FormControl>{inputComponent}</FormControl>
           <FormMessage />
         </FormItem>

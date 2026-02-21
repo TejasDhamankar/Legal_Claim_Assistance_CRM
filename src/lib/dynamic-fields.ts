@@ -123,7 +123,7 @@ export const DYNAMIC_FIELDS: Record<
     { key: 'Incident Date', label: 'Date Of Incident', type: 'date', required: true },
     { key: 'Type Of Abuse', label: 'Type Of Abuse', type: 'text', required: true },
     { key: 'Location Of Incident', label: 'Location / Facility Name', type: 'text', required: true },
-    { key: 'Other Details', label: 'Additional Incident Details', type: 'textarea', required: true },
+    { key: 'Other Details', label: 'Additional Incident Details', type: 'textarea' },
     { key: 'Attorney', label: 'Are You Currently Represented By An  Attorney?', type: 'radio', required: true, options: [
         { label: 'Yes', value: 'Yes' },
         { label: 'No', value: 'No' }
@@ -185,3 +185,5 @@ export const DYNAMIC_FIELDS: Record<
     { key: 'Zip Code', label: 'Zip Code', type: 'text' }
   ]
 };
+
+DYNAMIC_FIELDS['Juvenile Abuse'] = DYNAMIC_FIELDS['Illinois Abuse'];
