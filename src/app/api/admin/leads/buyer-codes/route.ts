@@ -7,12 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Verify authentication
     const decoded = getAuthToken(request);
-
     if (!decoded || typeof decoded !== 'object') {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
+
     const userId = decoded.id;
     const userRole = decoded.role;
 
@@ -20,35 +19,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get query parameters for potential filtering
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const createdBy = searchParams.get('createdBy');
-    const buyerCode = searchParams.get('buyerCode');
-
-    // Build query
     const query: any = {};
-    if (status && status !== 'All') {
-      query.status = status;
-    }
     if (userRole === 'admin') {
       query.createdBy = userId;
-    } else if (userRole === 'super_admin') {
-      if (createdBy) {
-        query.createdBy = createdBy;
-      }
-      if (buyerCode) {
-        query.buyerCode = buyerCode;
-      }
     }
 
-    const leads = await Lead.find(query)
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    const buyerCodes = await Lead.distinct('buyerCode', query);
 
-    return NextResponse.json({ leads });
+    const cleaned = buyerCodes
+      .filter((code: string | null | undefined) => typeof code === 'string' && code.trim().length > 0)
+      .sort((a: string, b: string) => a.localeCompare(b));
+
+    return NextResponse.json({ buyerCodes: cleaned });
   } catch (error) {
-    console.error('Error fetching leads:', error);
+    console.error('Error fetching buyer codes:', error);
     return NextResponse.json(
       { message: 'Server error', error: (error as Error).message },
       { status: 500 }

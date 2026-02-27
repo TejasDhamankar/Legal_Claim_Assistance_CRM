@@ -106,6 +106,13 @@ interface Lead {
   buyerCode?: string;
 }
 
+interface UserOption {
+  _id?: string;
+  id?: string;
+  name: string;
+  email: string;
+}
+
 export default function LeadManagement() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const router = useRouter();
@@ -114,10 +121,15 @@ export default function LeadManagement() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [createdByFilter, setCreatedByFilter] = useState<string>('ALL');
+  const [buyerCodeFilter, setBuyerCodeFilter] = useState<string>('ALL');
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [buyerCodes, setBuyerCodes] = useState<string[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, verified: 0, rejected: 0 });
   const { user, loading: authLoading, authChecked } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const updateForm = useForm<UpdateLeadFormValues>({
     resolver: zodResolver(updateLeadSchema),
@@ -126,8 +138,21 @@ export default function LeadManagement() {
 
   useEffect(() => {
     if (authLoading || !authChecked || !isAdmin) return;
+    if (user?.role === 'admin' && user.id && createdByFilter !== user.id) {
+      setCreatedByFilter(user.id);
+    }
+  }, [authLoading, authChecked, isAdmin, user, createdByFilter]);
+
+  useEffect(() => {
+    if (authLoading || !authChecked || !isAdmin) return;
     fetchLeads();
-  }, [statusFilter, authLoading, authChecked, isAdmin]);
+  }, [statusFilter, createdByFilter, buyerCodeFilter, authLoading, authChecked, isAdmin]);
+
+  useEffect(() => {
+    if (authLoading || !authChecked || !isAdmin || !isSuperAdmin) return;
+    fetchUsers();
+    fetchBuyerCodes();
+  }, [authLoading, authChecked, isAdmin, isSuperAdmin]);
 
   useEffect(() => {
     if (!authLoading && authChecked && user && !isAdmin) {
@@ -138,8 +163,12 @@ export default function LeadManagement() {
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const endpoint = statusFilter && statusFilter !== 'All' 
-        ? `/api/admin/leads?status=${statusFilter}` 
+      const params = new URLSearchParams();
+      if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
+      if (createdByFilter && createdByFilter !== 'ALL') params.set('createdBy', createdByFilter);
+      if (buyerCodeFilter && buyerCodeFilter !== 'ALL') params.set('buyerCode', buyerCodeFilter);
+      const endpoint = params.toString()
+        ? `/api/admin/leads?${params.toString()}`
         : '/api/admin/leads';
       const { data } = await axios.get(endpoint);
       setLeads(data.leads);
@@ -153,6 +182,24 @@ export default function LeadManagement() {
     } catch (error) {
       toast({ title: "Error", description: "Failed to load leads", variant: "destructive" });
     } finally { setLoading(false); }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const { data } = await axios.get('/api/admin/users');
+      setUsers(data.users || []);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load users", variant: "destructive" });
+    }
+  };
+
+  const fetchBuyerCodes = async () => {
+    try {
+      const { data } = await axios.get('/api/admin/leads/buyer-codes');
+      setBuyerCodes(data.buyerCodes || []);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load buyer codes", variant: "destructive" });
+    }
   };
 
   const onUpdateLead = async (values: UpdateLeadFormValues) => {
@@ -274,6 +321,34 @@ export default function LeadManagement() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                {isSuperAdmin && (
+                  <>
+                    <Select value={createdByFilter} onValueChange={setCreatedByFilter}>
+                      <SelectTrigger className="w-[180px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectValue placeholder="Created By" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectItem value="ALL">All Agents</SelectItem>
+                        {users.map((u) => {
+                          const id = u._id || u.id || '';
+                          if (!id) return null;
+                          return <SelectItem key={id} value={id}>{u.name}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <Select value={buyerCodeFilter} onValueChange={setBuyerCodeFilter}>
+                      <SelectTrigger className="w-[170px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectValue placeholder="Buyer Code" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectItem value="ALL">All Buyer Codes</SelectItem>
+                        {buyerCodes.map((code) => (
+                          <SelectItem key={code} value={code}>{code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[160px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
                     <SelectValue placeholder="Status" />
