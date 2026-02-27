@@ -87,7 +87,7 @@ export default function CreateLeadClient() {
 
   const onSubmit = async (values: FormValues) => {
     const requiredDynamicFields =
-      selectedType === 'Juvenile Abuse'
+      selectedType === 'Juvenile Detention Center (JDC)'
         ? (DYNAMIC_FIELDS[selectedType] || []).filter(field => field.key === 'Location Of Incident')
         : (DYNAMIC_FIELDS[selectedType] || []).filter(field => field.required);
     const missingFields = requiredDynamicFields.filter(field => !dynamicFields[field.key]);
@@ -129,7 +129,7 @@ export default function CreateLeadClient() {
     const fields = DYNAMIC_FIELDS[selectedType] || [];
     return fields.map(field => {
       const isRequired =
-        selectedType === 'Juvenile Abuse'
+        selectedType === 'Juvenile Detention Center (JDC)'
           ? field.key === 'Location Of Incident'
           : field.required;
       let inputComponent;
@@ -141,7 +141,7 @@ export default function CreateLeadClient() {
           />
         );
       } else if (field.type === 'text' || field.type === 'email' || field.type === 'phone') {
-        const placeholder = selectedType === 'Juvenile Abuse' && field.key === 'Location Of Incident'
+        const placeholder = selectedType === 'Juvenile Detention Center (JDC)' && field.key === 'Location Of Incident'
           ? 'Enter Juvenile Detention Center (JDC) name'
           : `Enter ${field.label.toLowerCase()}`;
         inputComponent = (

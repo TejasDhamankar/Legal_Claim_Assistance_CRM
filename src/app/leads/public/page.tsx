@@ -91,7 +91,7 @@ export default function PublicLeadPage() {
 
   const onSubmit = async (values: FormValues) => {
     const requiredDynamicFields =
-      selectedType === 'Juvenile Abuse'
+      selectedType === 'Juvenile Detention Center (JDC)'
         ? (DYNAMIC_FIELDS[selectedType] || []).filter(f => f.key === 'Location Of Incident')
         : (DYNAMIC_FIELDS[selectedType] || []).filter(f => f.required);
 
@@ -151,7 +151,7 @@ export default function PublicLeadPage() {
       <FormItem key={field.key}>
         <FormLabel className="text-sm">
           {field.label}
-          {(selectedType === 'Juvenile Abuse'
+          {(selectedType === 'Juvenile Detention Center (JDC)'
             ? field.key === 'Location Of Incident'
             : field.required) && '*'}
         </FormLabel>
@@ -170,7 +170,7 @@ export default function PublicLeadPage() {
             <Input
               type={field.type}
               placeholder={
-                selectedType === 'Juvenile Abuse' && field.key === 'Location Of Incident'
+                selectedType === 'Juvenile Detention Center (JDC)' && field.key === 'Location Of Incident'
                   ? 'Enter Juvenile Detention Center (JDC) name'
                   : undefined
               }

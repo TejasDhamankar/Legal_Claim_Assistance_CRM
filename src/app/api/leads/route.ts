@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const dynamicFieldsConfig = DYNAMIC_FIELDS[applicationType] || [];
-    const isJuvenileAbuse = applicationType === 'Juvenile Abuse';
+    const isJuvenileAbuse = applicationType === 'Juvenile Detention Center (JDC)';
     const requiredFields = isJuvenileAbuse
       ? dynamicFieldsConfig.filter(f => f.key === 'Location Of Incident')
       : dynamicFieldsConfig.filter(f => f.required);
