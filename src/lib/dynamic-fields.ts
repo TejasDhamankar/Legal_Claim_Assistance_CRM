@@ -186,4 +186,4 @@ export const DYNAMIC_FIELDS: Record<
   ]
 };
 
-DYNAMIC_FIELDS['Juvenile Abuse'] = DYNAMIC_FIELDS['Illinois Abuse'];
+DYNAMIC_FIELDS['Juvenile Detention Center (JDC)'] = DYNAMIC_FIELDS['Illinois Abuse'];
