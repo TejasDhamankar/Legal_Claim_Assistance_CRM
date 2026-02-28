@@ -23,23 +23,14 @@ export async function GET(request: NextRequest) {
     // Get query parameters for potential filtering
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const createdBy = searchParams.get('createdBy');
-    const buyerCode = searchParams.get('buyerCode');
 
     // Build query
     const query: any = {};
-    if (status && status !== 'All') {
+    if (status) {
       query.status = status;
     }
     if (userRole === 'admin') {
       query.createdBy = userId;
-    } else if (userRole === 'super_admin') {
-      if (createdBy) {
-        query.createdBy = createdBy;
-      }
-      if (buyerCode) {
-        query.buyerCode = buyerCode;
-      }
     }
 
     const leads = await Lead.find(query)
