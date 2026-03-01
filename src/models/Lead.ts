@@ -62,4 +62,8 @@ const leadSchema = new mongoose.Schema({
   buyerCode: { type: String },
 }, { timestamps: true });
 
+// Indexes to speed up filtering by creator and buyer code
+leadSchema.index({ createdBy: 1, createdAt: -1 });
+leadSchema.index({ buyerCode: 1, createdAt: -1 });
+
 export default mongoose.models.Lead || mongoose.model("Lead", leadSchema);

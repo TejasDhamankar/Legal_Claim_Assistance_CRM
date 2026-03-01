@@ -106,6 +106,13 @@ interface Lead {
   buyerCode?: string;
 }
 
+interface UserOption {
+  _id?: string;
+  id?: string;
+  name: string;
+  email: string;
+}
+
 export default function LeadManagement() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const router = useRouter();
@@ -114,10 +121,17 @@ export default function LeadManagement() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [createdByFilter, setCreatedByFilter] = useState<string>('ALL');
+  const [buyerCodeFilter, setBuyerCodeFilter] = useState<string>('ALL');
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [buyerCodes, setBuyerCodes] = useState<string[]>([]);
+  const [reloadKey, setReloadKey] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [stats, setStats] = useState({ total: 0, pending: 0, verified: 0, rejected: 0 });
   const { user, loading: authLoading, authChecked } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const updateForm = useForm<UpdateLeadFormValues>({
     resolver: zodResolver(updateLeadSchema),
@@ -125,35 +139,65 @@ export default function LeadManagement() {
   });
 
   useEffect(() => {
-    if (authLoading || !authChecked || !isAdmin) return;
-    fetchLeads();
-  }, [statusFilter, authLoading, authChecked, isAdmin]);
-
-  useEffect(() => {
     if (!authLoading && authChecked && user && !isAdmin) {
       router.replace('/dashboard');
     }
   }, [authLoading, authChecked, user, isAdmin, router]);
 
-  const fetchLeads = async () => {
-    setLoading(true);
-    try {
-      const endpoint = statusFilter && statusFilter !== 'All' 
-        ? `/api/admin/leads?status=${statusFilter}` 
-        : '/api/admin/leads';
-      const { data } = await axios.get(endpoint);
-      setLeads(data.leads);
-      
-      setStats({
-        total: data.leads.length,
-        pending: data.leads.filter((l: Lead) => l.status === 'PENDING').length,
-        verified: data.leads.filter((l: Lead) => l.status === 'VERIFIED' || l.status === 'ID_VERIFIED').length,
-        rejected: data.leads.filter((l: Lead) => l.status === 'REJECTED' || l.status === 'REJECTED_BY_CLIENT').length,
-      });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to load leads", variant: "destructive" });
-    } finally { setLoading(false); }
-  };
+  useEffect(() => {
+    if (authLoading || !authChecked || !isSuperAdmin) return;
+    const load = async () => {
+      try {
+        const [usersRes, codesRes] = await Promise.all([
+          axios.get('/api/admin/users'),
+          axios.get('/api/admin/leads/buyer-codes'),
+        ]);
+        setUsers(usersRes.data?.users || []);
+        setBuyerCodes(codesRes.data?.buyerCodes || []);
+      } catch (error: any) {
+        const msg = error?.response?.data?.message || error?.message || 'Failed to load filter data';
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
+      }
+    };
+    load();
+  }, [authLoading, authChecked, isSuperAdmin]);
+
+  useEffect(() => {
+    if (authLoading || !authChecked || !isAdmin) return;
+    const controller = new AbortController();
+    const load = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
+        if (buyerCodeFilter && buyerCodeFilter !== 'ALL') params.set('buyerCode', buyerCodeFilter);
+        if (isSuperAdmin) {
+          if (createdByFilter && createdByFilter !== 'ALL') params.set('createdBy', createdByFilter);
+        } else if (user?.id) {
+          params.set('createdBy', user.id);
+        }
+        const endpoint = params.toString() ? `/api/admin/leads?${params.toString()}` : '/api/admin/leads';
+        const { data } = await axios.get(endpoint, { signal: controller.signal });
+        setLeads(data.leads);
+        setErrorMessage('');
+        setStats({
+          total: data.leads.length,
+          pending: data.leads.filter((l: Lead) => l.status === 'PENDING').length,
+          verified: data.leads.filter((l: Lead) => l.status === 'VERIFIED' || l.status === 'ID_VERIFIED').length,
+          rejected: data.leads.filter((l: Lead) => l.status === 'REJECTED' || l.status === 'REJECTED_BY_CLIENT').length,
+        });
+      } catch (error: any) {
+        if (axios.isCancel(error)) return;
+        const msg = error?.response?.data?.message || error?.message || 'Failed to load leads';
+        setErrorMessage(msg);
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [statusFilter, createdByFilter, buyerCodeFilter, reloadKey, authLoading, authChecked, isAdmin, isSuperAdmin, user?.id]);
 
   const onUpdateLead = async (values: UpdateLeadFormValues) => {
     if (!selectedLead) return;
@@ -161,11 +205,13 @@ export default function LeadManagement() {
     try {
       await axios.put(`/api/admin/leads/${selectedLead._id}`, values);
       toast({ title: "Success", description: "Lead status updated" });
-      fetchLeads();
       setUpdateDialogOpen(false);
+      setSubmitting(false);
+      setReloadKey((k) => k + 1);
     } catch (error: any) {
+      setSubmitting(false);
       toast({ title: "Error", description: error.response?.data?.message || "Update failed", variant: "destructive" });
-    } finally { setSubmitting(false); }
+    }
   };
 
   const onDeleteLead = async (leadId: string) => {
@@ -173,7 +219,7 @@ export default function LeadManagement() {
     try {
       await axios.delete(`/api/admin/leads/${leadId}`);
       toast({ title: "Success", description: "Lead deleted successfully" });
-      fetchLeads();
+      setReloadKey((k) => k + 1);
     } catch (error: any) {
       toast({ title: "Error", description: "Delete failed", variant: "destructive" });
     }
@@ -218,6 +264,11 @@ export default function LeadManagement() {
   return (
     <DashboardLayout>
       <div className="flex flex-col space-y-8 max-w-[1400px] mx-auto px-6 py-8 transition-colors duration-300">
+        {errorMessage && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 text-amber-700 px-4 py-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            {errorMessage}
+          </div>
+        )}
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -264,7 +315,7 @@ export default function LeadManagement() {
                 </span>
                 Lead Records
               </CardTitle>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                   <Input 
@@ -274,6 +325,34 @@ export default function LeadManagement() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                {isSuperAdmin && (
+                  <>
+                    <Select value={createdByFilter} onValueChange={setCreatedByFilter}>
+                      <SelectTrigger className="w-[180px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectValue placeholder="Created By" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectItem value="ALL">All Agents</SelectItem>
+                        {users.map((u) => {
+                          const id = u._id || u.id || '';
+                          if (!id) return null;
+                          return <SelectItem key={id} value={id}>{u.name}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <Select value={buyerCodeFilter} onValueChange={setBuyerCodeFilter}>
+                      <SelectTrigger className="w-[170px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectValue placeholder="Buyer Code" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                        <SelectItem value="ALL">All Buyer Codes</SelectItem>
+                        {buyerCodes.map((code) => (
+                          <SelectItem key={code} value={code}>{code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[160px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
                     <SelectValue placeholder="Status" />
@@ -373,7 +452,7 @@ export default function LeadManagement() {
           </CardContent>
           <CardFooter className="px-6 py-4 flex justify-between bg-slate-50/30 dark:bg-[#0a0a0a] rounded-b-xl border-t border-slate-100 dark:border-zinc-800 transition-colors">
             <span className="text-sm text-slate-500 dark:text-zinc-500 font-medium">{filteredLeads.length} leads in view</span>
-            <Button variant="outline" size="sm" onClick={fetchLeads} className="border-slate-200 bg-white text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 shadow-sm">
+            <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)} className="border-slate-200 bg-white text-slate-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 shadow-sm">
               <RefreshCw className="mr-2 h-3.5 w-3.5" /> Force Refresh
             </Button>
           </CardFooter>
