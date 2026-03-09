@@ -40,11 +40,19 @@ export async function GET(request: NextRequest) {
       query.createdBy = createdBy;
     }
 
-    const leads = await Lead.find(query)
-      .select('firstName lastName email phone status applicationType createdAt buyerCode createdBy')
+    const leadsRaw = await Lead.find(query)
+      .select('firstName lastName email phone status applicationType createdAt buyerCode createdBy notes')
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
       .lean();
+
+    const leads = leadsRaw.map((lead: any) => ({
+      ...lead,
+      createdByDisplay:
+        typeof lead.notes === 'string' && lead.notes.includes('[PUBLIC INTAKE]')
+          ? 'Public Link'
+          : lead.createdBy?.name || 'System',
+    }));
 
     return NextResponse.json({ leads });
   } catch (error) {

@@ -103,6 +103,7 @@ interface Lead {
   applicationType: string; 
   createdAt: string;
   createdBy: { name: string; email: string; }; 
+  createdByDisplay?: string;
   buyerCode?: string;
 }
 
@@ -402,7 +403,7 @@ export default function LeadManagement() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <UserCircle className="h-4 w-4 text-slate-400 dark:text-zinc-600" />
-                        <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">{lead.createdBy?.name || "System"}</div>
+                        <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">{lead.createdByDisplay || lead.createdBy?.name || "System"}</div>
                       </div>
                     </TableCell>
                     <TableCell>
