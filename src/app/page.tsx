@@ -17,7 +17,7 @@ export default function Home() {
               Accelerate your sales pipeline with{' '}
               {/* Gradient updated to your Electric Violet & Emerald theme */}
               <span className="text-gray-900">
-                VetoAxis
+                Legal Claim Assistance
               </span>
             </h1>
             
