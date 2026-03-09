@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
 import {
     Plus,
+    Link2,
     LayoutDashboard,
     TrendingUp,
     CheckCircle,
@@ -22,6 +23,7 @@ import { motion } from "framer-motion"
 // Import your configuration registry
 import { STATUS_CONFIG, BUCKETS } from './status-registry'
 import Link from "next/link"
+import { toast } from "@/components/ui/use-toast"
 
 export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth()
@@ -32,6 +34,31 @@ export default function DashboardPage() {
     const [isDown, setIsDown] = useState(false);
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
+    const [shareLinkState, setShareLinkState] = useState<'idle' | 'copied' | 'cooldown'>('idle');
+    const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const copyShareLink = async () => {
+        const shareUrl = `${window.location.origin}/create-lead`;
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+            if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+            setShareLinkState('copied');
+            copiedTimerRef.current = setTimeout(() => setShareLinkState('cooldown'), 5000);
+            resetTimerRef.current = setTimeout(() => setShareLinkState('idle'), 10000);
+            toast({ title: 'Copied Link', description: shareUrl });
+        } catch {
+            toast({ title: 'Copy failed', description: shareUrl, variant: 'destructive' });
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+            if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+        };
+    }, []);
 
     const fetchStats = async () => {
         try {
@@ -70,11 +97,26 @@ export default function DashboardPage() {
                             Welcome back, {user?.name || '...'}
                         </p>
                     </div>
-                    <Link href="/leads/create" className="w-full md:w-auto">
-                        <Button size="sm" className="font-bold gap-2 rounded-lg w-full md:w-auto bg-primary dark:bg-white dark:text-black">
-                            <Plus className="h-4 w-4" /> New Lead
+                    <div className="flex w-full md:w-auto flex-col sm:flex-row gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={copyShareLink}
+                            className="font-bold gap-2 rounded-lg w-full md:w-auto"
+                        >
+                            <Link2 className="h-4 w-4" />
+                            {shareLinkState === 'copied'
+                                ? 'Copied'
+                                : shareLinkState === 'cooldown'
+                                ? 'Copy Link'
+                                : 'Share Link'}
                         </Button>
-                    </Link>
+                        <Link href="/leads/create" className="w-full md:w-auto">
+                            <Button size="sm" className="font-bold gap-2 rounded-lg w-full md:w-auto bg-primary dark:bg-white dark:text-black">
+                                <Plus className="h-4 w-4" /> New Lead
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* 4 Summary Cards */}
