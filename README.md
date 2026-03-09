@@ -34,3 +34,37 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Public Intake Links
+
+This project now supports a separate secure public lead form:
+
+- Public form route: `/intake/:clientSlug?t=:signedToken&src=whatsapp`
+- Shortcut route (auto-redirects to public form): `/create-lead`
+- Public submit API: `POST /api/public/intake`
+
+### Required environment variables
+
+```env
+# Used to sign/verify public intake links
+PUBLIC_INTAKE_SECRET=replace-with-long-random-secret
+
+# Map client slug -> where leads should be created
+# createdBy and organizationId should be valid Mongo ObjectIds
+PUBLIC_INTAKE_CLIENTS={"client-a":{"organizationId":"<ORG_ID>","createdBy":"<USER_ID>"}}
+PUBLIC_INTAKE_DEFAULT_SLUG=client-a
+```
+
+### Generate a signed link token
+
+Run this from the project root (PowerShell):
+
+```powershell
+node -e "const crypto=require('crypto');const slug='client-a';const exp=Math.floor(Date.now()/1000)+60*60*24*30;const payload=Buffer.from(JSON.stringify({slug,exp})).toString('base64url');const sig=crypto.createHmac('sha256',process.env.PUBLIC_INTAKE_SECRET||process.env.JWT_SECRET).update(payload).digest('base64url');console.log(`${payload}.${sig}`);"
+```
+
+Then share:
+
+```text
+https://YOUR_DOMAIN/intake/client-a?t=TOKEN_HERE&src=whatsapp
+```

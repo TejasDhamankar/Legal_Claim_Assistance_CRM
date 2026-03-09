@@ -50,12 +50,20 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const leads = await Lead.find(query)
+    const leadsRaw = await Lead.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('createdBy', 'name email')
       .lean();
+
+    const leads = leadsRaw.map((lead: any) => ({
+      ...lead,
+      createdByDisplay:
+        typeof lead.notes === 'string' && lead.notes.includes('[PUBLIC INTAKE]')
+          ? 'Public Link'
+          : lead.createdBy?.name || 'System',
+    }));
 
     const total = await Lead.countDocuments(query);
 
