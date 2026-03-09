@@ -95,7 +95,7 @@ export default function SecurityPage() {
               <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] bg-white/80 dark:bg-slate-900/50 backdrop-blur-md">
                 <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <KeyRound className="h-5 w-5 text-indigo-500" />
+                    <KeyRound className="h-5 w-5 text-primary" />
 Login Details                  </CardTitle>
                   <CardDescription>Update your login password below</CardDescription>
                 </CardHeader>

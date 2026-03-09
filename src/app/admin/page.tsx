@@ -945,7 +945,7 @@ const formatDate = (dateString: string | Date) => {
                     <h3 className="text-2xl font-bold">{stats.organizations}</h3>
                   </div>
                   <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/20">
-                    <Building className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    <Building className="h-5 w-5 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -960,7 +960,7 @@ const formatDate = (dateString: string | Date) => {
                   <h3 className="text-2xl font-bold">{stats.total}</h3>
                 </div>
                 <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <Users className="h-5 w-5 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -974,7 +974,7 @@ const formatDate = (dateString: string | Date) => {
                   <h3 className="text-2xl font-bold">{stats.admins}</h3>
                 </div>
                 <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/20">
-                  <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <Shield className="h-5 w-5 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -1016,7 +1016,7 @@ const formatDate = (dateString: string | Date) => {
                   <h3 className="text-2xl font-bold">{stats.inactive}</h3>
                 </div>
                 <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-900/20">
-                  <Lock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <Lock className="h-5 w-5 text-muted-foreground" />
                 </div>
               </div>
             </CardContent>
