@@ -4,7 +4,7 @@ import { z } from 'zod';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
 import { DYNAMIC_FIELDS } from '@/lib/dynamic-fields';
-import { getPublicClientConfig, verifyIntakeToken } from '@/lib/public-intake';
+import { getPublicClientConfig, PUBLIC_INTAKE_NOTE_MARKER, verifyIntakeToken } from '@/lib/public-intake';
 
 type RateBucket = {
   count: number;
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         ? clientConfig.organizationId
         : undefined;
 
-    const sourceNote = `[PUBLIC INTAKE] source=${payload.source}; client=${payload.clientSlug}`;
+    const sourceNote = `${PUBLIC_INTAKE_NOTE_MARKER} source=${payload.source}; client=${payload.clientSlug}`;
     const notes = payload.notes ? `${payload.notes}\n\n${sourceNote}` : sourceNote;
 
     const lead = await Lead.create({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
+import { PUBLIC_INTAKE_NOTE_REGEX } from '@/lib/public-intake';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const query: any = {};
     if (userRole === 'admin') {
       query.createdBy = userId;
+      query.notes = { $not: PUBLIC_INTAKE_NOTE_REGEX };
     }
 
     const buyerCodes = await Lead.distinct('buyerCode', query);

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Lead from '@/models/Lead';
 import { getAuthToken } from '@/lib/auth';
 import { dbConnect } from '@/lib/dbConnect';
+import { PUBLIC_INTAKE_NOTE_REGEX } from '@/lib/public-intake';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +16,10 @@ export async function GET(request: NextRequest) {
     let leadFilter: any = {};
 
     if (userRole !== 'super_admin') {
-      leadFilter = { createdBy: userId };
+      leadFilter = {
+        createdBy: userId,
+        notes: { $not: PUBLIC_INTAKE_NOTE_REGEX },
+      };
     }
 
     // 1. Existing Status Counts
