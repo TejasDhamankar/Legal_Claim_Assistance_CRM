@@ -3,7 +3,7 @@ import { Zap } from 'lucide-react';
 import ClientLeads from '@/components/clientLeads';
 
 export const metadata = {
-  title: 'Leads | VetoAxis',
+  title: 'Leads | Legal Claim Assistance',
   description: 'View and manage your leads.',
 };
 

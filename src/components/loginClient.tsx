@@ -118,11 +118,11 @@ export default function LoginClient() {
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="name@VetoAxis.com"
+                    placeholder="name@Legal Claim Assistance.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 bg-white border-gray-300 text-gray-900 focus:ring-gray-500 focus:border-gray-500 rounded-lg"
@@ -136,7 +136,7 @@ export default function LoginClient() {
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
@@ -174,7 +174,7 @@ export default function LoginClient() {
       </motion.div>
 
       <div className="mt-12 text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-600">
-        <p>© {new Date().getFullYear()} VetoAxis Systems — High Performance CRM</p>
+        <p>© {new Date().getFullYear()} Legal Claim Assistance Systems — High Performance CRM</p>
       </div>
     </div>
   );

@@ -59,8 +59,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="hover:bg-transparent">
               <Link href="/dashboard" className="flex items-center gap-3">
-                <Image src="/logo.png" width={24} height={24} alt="VetoAxis Logo" className="shrink-0" />
-                <span className="text-sm font-semibold truncate group-data-[collapsible=icon]:hidden">VetoAxis</span>
+                <Image src="/logo.png" width={24} height={24} alt="Legal Claim Assistance Logo" className="shrink-0" />
+                <span className="text-sm font-semibold truncate group-data-[collapsible=icon]:hidden">Legal Claim Assistance</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

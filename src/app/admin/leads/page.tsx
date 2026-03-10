@@ -312,13 +312,13 @@ export default function LeadManagement() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="text-xl flex items-center gap-2 text-slate-800 dark:text-white">
                 <span className="p-2 bg-indigo-50 dark:bg-zinc-900 rounded-lg border border-indigo-100 dark:border-zinc-800">
-                  <Users className="h-5 w-5 text-indigo-600 dark:text-zinc-400" />
+                  <Users className="h-5 w-5 text-primary" />
                 </span>
                 Lead Records
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     placeholder="Search name or email..." 
                     className="pl-10 w-full md:w-[300px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600" 
@@ -383,7 +383,7 @@ export default function LeadManagement() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={8} className="h-64 text-center"><Loader2 className="animate-spin mx-auto h-8 w-8 text-indigo-600 dark:text-white" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-64 text-center"><Loader2 className="animate-spin mx-auto h-8 w-8 text-primary" /></TableCell></TableRow>
                 ) : filteredLeads.map((lead) => (
                   <TableRow key={lead._id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors border-slate-100 dark:border-zinc-800">
                     <TableCell className="px-6">
@@ -396,13 +396,13 @@ export default function LeadManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-zinc-400 font-medium">
-                        <Briefcase className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
+                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                         {lead.applicationType || "General"}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <UserCircle className="h-4 w-4 text-slate-400 dark:text-zinc-600" />
+                        <UserCircle className="h-4 w-4 text-muted-foreground" />
                         <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">{lead.createdByDisplay || lead.createdBy?.name || "System"}</div>
                       </div>
                     </TableCell>
@@ -423,7 +423,7 @@ export default function LeadManagement() {
                     <TableCell className="text-right px-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><MoreHorizontal className="h-5 w-5" /></Button>
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
                           {user?.role === 'super_admin' && (
