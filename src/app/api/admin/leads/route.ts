@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
+import { PUBLIC_INTAKE_NOTE_MARKER, PUBLIC_INTAKE_NOTE_REGEX } from '@/lib/public-intake';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
     }
     if (userRole === 'admin') {
       query.createdBy = userId;
+      query.notes = { $not: PUBLIC_INTAKE_NOTE_REGEX };
     } else if (createdBy) {
       query.createdBy = createdBy;
     }
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
     const leads = leadsRaw.map((lead: any) => ({
       ...lead,
       createdByDisplay:
-        typeof lead.notes === 'string' && lead.notes.includes('[PUBLIC INTAKE]')
+        typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER)
           ? 'Public Link'
           : lead.createdBy?.name || 'System',
     }));

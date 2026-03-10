@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
+import { PUBLIC_INTAKE_NOTE_MARKER } from '@/lib/public-intake';
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +21,12 @@ export async function GET(
       .populate('statusHistory.changedBy', 'name email');
 
     if (!lead) return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
+
+    const isPublicIntakeLead =
+      typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER);
+    if (decoded.role !== 'super_admin' && isPublicIntakeLead) {
+      return NextResponse.json({ message: 'Access Denied' }, { status: 403 });
+    }
 
     if (decoded.role !== 'super_admin' &&
         lead.createdBy && lead.createdBy._id.toString() !== decoded.id) {
@@ -47,6 +54,12 @@ export async function PUT(
 
     const lead = await Lead.findById(leadId);
     if (!lead) return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
+
+    const isPublicIntakeLead =
+      typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER);
+    if (decoded.role !== 'super_admin' && isPublicIntakeLead) {
+      return NextResponse.json({ message: 'Access Denied' }, { status: 403 });
+    }
 
     if (decoded.role !== 'super_admin' &&
         lead.createdBy && lead.createdBy.toString() !== decoded.id) {

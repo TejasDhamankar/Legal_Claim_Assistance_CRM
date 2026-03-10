@@ -5,6 +5,9 @@ export type PublicClientConfig = {
   createdBy?: string;
 };
 
+export const PUBLIC_INTAKE_NOTE_MARKER = '[PUBLIC INTAKE]';
+export const PUBLIC_INTAKE_NOTE_REGEX = /\[PUBLIC INTAKE\]/;
+
 type IntakeTokenPayload = {
   slug: string;
   exp: number;
