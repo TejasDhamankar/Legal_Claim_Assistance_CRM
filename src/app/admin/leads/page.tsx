@@ -42,6 +42,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/DateInput';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -82,7 +83,7 @@ const LEAD_STATUSES = [
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING", 
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4", 
   "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", 
-  "BILLABLE", "CAMPAIGN_PAUSED", "SENT_TO_LAW_FIRM"
+  "BILLABLE", "CAMPAIGN_PAUSED", "SENT_TO_LAW_FIRM", "RETURNED"
 ];
 
 const updateLeadSchema = z.object({
@@ -103,7 +104,6 @@ interface Lead {
   applicationType: string; 
   createdAt: string;
   createdBy: { name: string; email: string; }; 
-  createdByDisplay?: string;
   buyerCode?: string;
 }
 
@@ -125,6 +125,7 @@ export default function LeadManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [createdByFilter, setCreatedByFilter] = useState<string>('ALL');
   const [buyerCodeFilter, setBuyerCodeFilter] = useState<string>('ALL');
+  const [entryDate, setEntryDate] = useState<string>('');
   const [users, setUsers] = useState<UserOption[]>([]);
   const [buyerCodes, setBuyerCodes] = useState<string[]>([]);
   const [reloadKey, setReloadKey] = useState<number>(0);
@@ -172,6 +173,7 @@ export default function LeadManagement() {
         const params = new URLSearchParams();
         if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
         if (buyerCodeFilter && buyerCodeFilter !== 'ALL') params.set('buyerCode', buyerCodeFilter);
+        if (entryDate) params.set('entryDate', entryDate);
         if (isSuperAdmin) {
           if (createdByFilter && createdByFilter !== 'ALL') params.set('createdBy', createdByFilter);
         } else if (user?.id) {
@@ -198,7 +200,7 @@ export default function LeadManagement() {
     };
     load();
     return () => controller.abort();
-  }, [statusFilter, createdByFilter, buyerCodeFilter, reloadKey, authLoading, authChecked, isAdmin, isSuperAdmin, user?.id]);
+  }, [statusFilter, createdByFilter, buyerCodeFilter, entryDate, reloadKey, authLoading, authChecked, isAdmin, isSuperAdmin, user?.id]);
 
   const onUpdateLead = async (values: UpdateLeadFormValues) => {
     if (!selectedLead) return;
@@ -312,13 +314,13 @@ export default function LeadManagement() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="text-xl flex items-center gap-2 text-slate-800 dark:text-white">
                 <span className="p-2 bg-indigo-50 dark:bg-zinc-900 rounded-lg border border-indigo-100 dark:border-zinc-800">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Users className="h-5 w-5 text-indigo-600 dark:text-zinc-400" />
                 </span>
                 Lead Records
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                   <Input 
                     placeholder="Search name or email..." 
                     className="pl-10 w-full md:w-[300px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600" 
@@ -363,6 +365,16 @@ export default function LeadManagement() {
                     {LEAD_STATUSES.map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <div className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#111111] px-3 py-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 whitespace-nowrap">Entry Date</span>
+                  <DateInput
+                    value={entryDate}
+                    onChange={setEntryDate}
+                    placeholder="MM/DD/YYYY"
+                    calendarOnly
+                    className="h-8 w-[150px] border-0 px-1 text-xs shadow-none focus-visible:ring-0"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -383,7 +395,7 @@ export default function LeadManagement() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={8} className="h-64 text-center"><Loader2 className="animate-spin mx-auto h-8 w-8 text-primary" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-64 text-center"><Loader2 className="animate-spin mx-auto h-8 w-8 text-indigo-600 dark:text-white" /></TableCell></TableRow>
                 ) : filteredLeads.map((lead) => (
                   <TableRow key={lead._id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors border-slate-100 dark:border-zinc-800">
                     <TableCell className="px-6">
@@ -396,14 +408,14 @@ export default function LeadManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-zinc-400 font-medium">
-                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Briefcase className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
                         {lead.applicationType || "General"}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <UserCircle className="h-4 w-4 text-muted-foreground" />
-                        <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">{lead.createdByDisplay || lead.createdBy?.name || "System"}</div>
+                        <UserCircle className="h-4 w-4 text-slate-400 dark:text-zinc-600" />
+                        <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">{lead.createdBy?.name || "System"}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -423,7 +435,7 @@ export default function LeadManagement() {
                     <TableCell className="text-right px-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></Button>
+                          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><MoreHorizontal className="h-5 w-5" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
                           {user?.role === 'super_admin' && (

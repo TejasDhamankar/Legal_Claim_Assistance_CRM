@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/DateInput';
 import { Separator } from '@/components/ui/separator';
 import {
   Loader2, Search, History, ChevronRight, ChevronLeft, 
@@ -31,6 +32,7 @@ export default function ClientLeads() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [entryDate, setEntryDate] = useState(searchParams.get('entryDate') || '');
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 0 });
   const [historyDialog, setHistoryDialog] = useState<{ open: boolean; lead: any | null }>({ open: false, lead: null });
 
@@ -40,6 +42,9 @@ export default function ClientLeads() {
       let url = `/api/leads?page=${pagination.page}&limit=10&search=${searchInput}&t=${Date.now()}`;
       if (statusFilter && statusFilter !== 'All') {
         url += `&status=${statusFilter}`;
+      }
+      if (entryDate) {
+        url += `&entryDate=${entryDate}`;
       }
       const { data } = await axios.get(url);
       setLeads(data.leads);
@@ -53,13 +58,13 @@ export default function ClientLeads() {
 
   useEffect(() => {
     if (authChecked && !authLoading && user) fetchLeads();
-  }, [user, authChecked, authLoading, pagination.page, statusFilter, searchInput]);
+  }, [user, authChecked, authLoading, pagination.page, statusFilter, searchInput, entryDate]);
 
   const LEAD_STATUSES = [
     "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT", "PAID","POSTED", "SIGNED", "VM", "TRANSFERRED", "SEND TO ANOTHER BUYER",
     "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
     "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
-    "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED"
+    "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED"
   ];
 
   return (
@@ -91,14 +96,14 @@ export default function ClientLeads() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="text-xl flex items-center gap-2 font-bold text-slate-800 dark:text-white">
                 <span className="p-2 bg-indigo-50 dark:bg-zinc-900 rounded-lg border border-indigo-100 dark:border-zinc-800">
-                  <Filter className="h-5 w-5 text-primary" />
+                  <Filter className="h-5 w-5 text-indigo-600 dark:text-zinc-400" />
                 </span>
                 Record Filters
               </CardTitle>
               
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                   <Input 
                     placeholder="Search name, email, ID..." 
                     className="pl-10 w-full md:w-[280px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-indigo-500 dark:focus:ring-white/20 placeholder:text-slate-400 dark:placeholder:text-zinc-600" 
@@ -121,12 +126,22 @@ export default function ClientLeads() {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#111111] px-3 py-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 whitespace-nowrap">Entry Date</span>
+                  <DateInput
+                    value={entryDate}
+                    onChange={setEntryDate}
+                    placeholder="MM/DD/YYYY"
+                    calendarOnly
+                    className="h-8 w-[150px] border-0 px-1 text-xs shadow-none focus-visible:ring-0"
+                  />
+                </div>
 
-                {(searchInput || statusFilter) && (
+                {(searchInput || statusFilter || entryDate) && (
                   <Button 
                     variant="ghost" 
-                    onClick={() => { setSearchInput(''); setStatusFilter(''); }}
-                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => { setSearchInput(''); setStatusFilter(''); setEntryDate(''); }}
+                    className="text-slate-400 hover:text-rose-600 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:bg-rose-400/10"
                   >
                     <X className="h-4 w-4 mr-1" /> Clear
                   </Button>
@@ -155,7 +170,7 @@ export default function ClientLeads() {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-64 text-center">
-                      <Loader2 className="animate-spin mx-auto h-8 w-8 text-primary" />
+                      <Loader2 className="animate-spin mx-auto h-8 w-8 text-indigo-600 dark:text-white" />
                       <p className="text-sm text-slate-500 mt-2">Fetching records...</p>
                     </TableCell>
                   </TableRow>
@@ -181,10 +196,10 @@ export default function ClientLeads() {
                     <TableCell>
                       <div className="flex flex-col">
                         <div className="text-sm text-slate-600 dark:text-zinc-300 flex items-center gap-1.5">
-                          <Mail className="h-3 w-3 text-muted-foreground" /> {lead.email}
+                          <Mail className="h-3 w-3 text-slate-400 dark:text-zinc-500" /> {lead.email}
                         </div>
                         <div className="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1.5 mt-0.5">
-                          <PhoneCall className="h-3 w-3 text-muted-foreground" /> {lead.phone}
+                          <PhoneCall className="h-3 w-3 text-slate-400 dark:text-zinc-600" /> {lead.phone}
                         </div>
                       </div>
                     </TableCell>
@@ -211,9 +226,9 @@ export default function ClientLeads() {
                     <TableCell className="text-sm font-medium text-slate-600 dark:text-zinc-400">{lead.buyerCode || "N/A"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <UserCircle className="h-4 w-4 text-muted-foreground" />
+                        <UserCircle className="h-4 w-4 text-slate-400 dark:text-zinc-600" />
                         <div className="text-sm font-medium text-slate-700 dark:text-zinc-300 whitespace-nowrap">
-                          {lead.createdByDisplay || lead.createdBy?.name || "System"}
+                          {lead.createdBy?.name || "System"}
                         </div>
                       </div>
                     </TableCell>
@@ -225,10 +240,10 @@ export default function ClientLeads() {
                     </TableCell>
                     <TableCell className="text-right px-6">
                       <div className="flex justify-end gap-2">
-                        <button title="History" className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" onClick={() => setHistoryDialog({ open: true, lead })}>
+                        <button title="History" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-white dark:hover:bg-zinc-800 rounded-lg transition-colors" onClick={() => setHistoryDialog({ open: true, lead })}>
                           <History className="h-4 w-4" />
                         </button>
-                        <button title="View Details" className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors" onClick={() => router.push(`/leads/${lead._id}`)}>
+                        <button title="View Details" className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-zinc-800 rounded-lg transition-colors" onClick={() => router.push(`/leads/${lead._id}`)}>
                           <ExternalLink className="h-4 w-4" />
                         </button>
                       </div>
@@ -263,7 +278,7 @@ export default function ClientLeads() {
         <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl bg-white dark:bg-[#0a0a0a] dark:border dark:border-zinc-800">
           <DialogHeader className="p-6 bg-slate-900 text-white dark:bg-[#111111]">
             <DialogTitle className="text-xl flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
+              <History className="h-5 w-5 text-indigo-400 dark:text-zinc-400" />
               Activity History
             </DialogTitle>
             <DialogDescription className="text-slate-400 dark:text-zinc-500">

@@ -19,7 +19,9 @@ const leadSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   phone: String,
+  phoneNormalized: String,
   email: String,
+  emailNormalized: String,
   dateOfBirth: Date,
   address: String,
   applicationType: String,
@@ -52,7 +54,8 @@ const leadSchema = new mongoose.Schema({
   "ID_VERIFIED",
   "BILLABLE",
   "CAMPAIGN_PAUSED",
-  "SENT_TO_LAW_FIRM"
+  "SENT_TO_LAW_FIRM",
+  "RETURNED"
 ],
 
     default: "PENDING",
@@ -65,5 +68,13 @@ const leadSchema = new mongoose.Schema({
 // Indexes to speed up filtering by creator and buyer code
 leadSchema.index({ createdBy: 1, createdAt: -1 });
 leadSchema.index({ buyerCode: 1, createdAt: -1 });
+leadSchema.index({ organizationId: 1, emailNormalized: 1 }, {
+  unique: true,
+  partialFilterExpression: { emailNormalized: { $exists: true, $ne: "" } }
+});
+leadSchema.index({ organizationId: 1, phoneNormalized: 1 }, {
+  unique: true,
+  partialFilterExpression: { phoneNormalized: { $exists: true, $ne: "" } }
+});
 
 export default mongoose.models.Lead || mongoose.model("Lead", leadSchema);

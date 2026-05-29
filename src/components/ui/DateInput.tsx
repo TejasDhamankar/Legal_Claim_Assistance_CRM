@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 
 interface DateInputProps {
-  value: string; // Expects 'YYYY-MM-DD'
+  value?: string; // Expects 'YYYY-MM-DD'
   onChange: (value: string) => void; // Emits 'YYYY-MM-DD'
   placeholder?: string;
+  className?: string;
+  calendarOnly?: boolean;
 }
 
-export function DateInput({ value, onChange, placeholder = 'MM/DD/YYYY' }: DateInputProps) {
+export function DateInput({ value, onChange, placeholder = 'MM/DD/YYYY', className = '', calendarOnly = false }: DateInputProps) {
   const [displayValue, setDisplayValue] = useState('');
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,11 +30,20 @@ export function DateInput({ value, onChange, placeholder = 'MM/DD/YYYY' }: DateI
   }, [value]);
 
   const handleDisplayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    setDisplayValue(inputValue);
+    if (calendarOnly) return;
+    const rawDigits = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let masked = rawDigits;
+    if (rawDigits.length > 2) masked = `${rawDigits.slice(0, 2)}/${rawDigits.slice(2)}`;
+    if (rawDigits.length > 4) masked = `${rawDigits.slice(0, 2)}/${rawDigits.slice(2, 4)}/${rawDigits.slice(4)}`;
+    setDisplayValue(masked);
 
-    const parsedDate = parse(inputValue, 'MM/dd/yyyy', new Date());
-    if (isValid(parsedDate)) {
+    if (rawDigits.length !== 8) {
+      onChange('');
+      return;
+    }
+
+    const parsedDate = parse(masked, 'MM/dd/yyyy', new Date());
+    if (isValid(parsedDate) && format(parsedDate, 'MM/dd/yyyy') === masked) {
       onChange(format(parsedDate, 'yyyy-MM-dd'));
     }
   };
@@ -65,9 +76,13 @@ export function DateInput({ value, onChange, placeholder = 'MM/DD/YYYY' }: DateI
         type="text"
         placeholder={placeholder}
         value={displayValue}
+        maxLength={10}
         onChange={handleDisplayChange}
         onBlur={handleBlur}
-        className="h-10 bg-background pr-10"
+        readOnly={calendarOnly}
+        onKeyDown={calendarOnly ? (e) => e.preventDefault() : undefined}
+        onPaste={calendarOnly ? (e) => e.preventDefault() : undefined}
+        className={`h-10 bg-background pr-10 ${className}`}
       />
       <input
         type="date"

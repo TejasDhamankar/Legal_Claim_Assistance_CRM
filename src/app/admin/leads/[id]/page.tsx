@@ -86,7 +86,7 @@ const LEAD_STATUSES = [
   "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID","SIGNED","VM","TRANSFERRED","SEND TO ANOTHER BUYER",
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
-  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED"
+  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED"
 ];
 
 // Define the schema for updating lead status
@@ -347,9 +347,19 @@ export default function LeadDetailsPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               {lead.firstName} {lead.lastName}
             </h1>
-            <p className="text-muted-foreground">
-              Lead ID: {lead._id}
-            </p>
+            <div className="mt-1 flex items-center gap-3">
+              <p className="text-muted-foreground">
+                Lead ID: {lead._id}
+              </p>
+              {user?.role === 'super_admin' && (
+                <Button
+                  onClick={() => router.push(`/admin/leads/edit/${lead._id}`)}
+                >
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  Edit Lead
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

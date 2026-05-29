@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { LayoutDashboard, Gauge, Users, SheetIcon, Lock } from "lucide-react"
+import { LayoutDashboard, Gauge, Users, SheetIcon, Lock, ActivitySquare } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
@@ -37,6 +37,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         items: [
           { label: 'User Management', href: '/admin', icon: Users, roles: ['admin', 'super_admin'] },
           { label: 'Lead Management', href: '/admin/leads', icon: SheetIcon, roles: ['admin', 'super_admin'] },
+          { label: 'Session Activity', href: '/admin/sessions', icon: ActivitySquare, roles: ['super_admin'] },
           { label: 'Security', href: '/security', icon: Lock, roles: ['admin', 'super_admin', 'agent'] }
         ]
       }
@@ -59,8 +60,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="hover:bg-transparent">
               <Link href="/dashboard" className="flex items-center gap-3">
-                <Image src="/logo.png" width={24} height={24} alt="Legal Claim Assistance Logo" className="shrink-0" />
-                <span className="text-sm font-semibold truncate group-data-[collapsible=icon]:hidden">Legal Claim Assistance</span>
+                <Image src="/legal-crm-icon.svg" width={24} height={24} alt="Legal CRM" className="shrink-0" />
+                <span className="text-sm font-semibold truncate group-data-[collapsible=icon]:hidden">Legal CRM</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
