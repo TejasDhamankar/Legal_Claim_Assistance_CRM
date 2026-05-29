@@ -125,7 +125,7 @@ export default function PublicLeadPage() {
         }
       });
 
-      await axios.post('/api/leads', {
+      const { data } = await axios.post('/api/leads', {
         ...values,
         dateOfBirth: formattedDOB,
         fields: formattedDynamicFields,
@@ -133,7 +133,10 @@ export default function PublicLeadPage() {
       });
 
       setSubmitted(true);
-      toast({ title: 'Success', description: 'Lead created successfully' });
+      toast({
+        title: data.isDuplicate ? 'Duplicate Lead' : 'Success',
+        description: data.message || 'Lead created successfully',
+      });
       setTimeout(() => router.push('/leads'), 1500);
     } catch (error: any) {
       toast({

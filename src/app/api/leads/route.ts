@@ -4,7 +4,64 @@ import { verifyToken, getAuthToken } from '@/lib/auth';
 import { dbConnect } from '@/lib/dbConnect';
 import { DYNAMIC_FIELDS } from '@/lib/dynamic-fields';
 import User from '@/models/User';
-import { PUBLIC_INTAKE_NOTE_MARKER, PUBLIC_INTAKE_NOTE_REGEX } from '@/lib/public-intake';
+
+const normalizeEmail = (value?: string | null) => {
+  if (!value) return '';
+  return value.trim().toLowerCase();
+};
+
+const normalizePhone = (value?: string | null) => {
+  if (!value) return '';
+  return value.replace(/\D/g, '');
+};
+
+const normalizeText = (value?: string | null) => {
+  if (!value) return '';
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+};
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getFieldValue = (fields: unknown, key: string) => {
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) return '';
+  const value = (fields as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : '';
+};
+
+const buildDuplicateScope = (decoded: any, user: any) => {
+  if (decoded.role === 'super_admin') return {};
+  if (user?.organizationId) return { organizationId: user.organizationId };
+  return { createdBy: decoded.id };
+};
+
+const buildLeadInfo = (lead: any) => ({
+  id: lead._id,
+  name: `${lead.firstName} ${lead.lastName}`,
+  status: lead.status,
+  createdBy: lead.createdBy ? lead.createdBy.name : 'Unknown',
+  createdAt: lead.createdAt
+});
+
+const parseDateOnly = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +85,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
+    const entryDate = url.searchParams.get('entryDate');
 
     const skip = (page - 1) * limit;
 
@@ -36,7 +94,6 @@ export async function GET(request: NextRequest) {
 
     if (userRole !== 'super_admin') {
       query.createdBy = userId;
-      query.notes = { $not: PUBLIC_INTAKE_NOTE_REGEX };
     }
 
     if (status) {
@@ -51,21 +108,21 @@ export async function GET(request: NextRequest) {
         { phone: { $regex: search, $options: 'i' } }
       ];
     }
+    if (entryDate) {
+      const parsed = parseDateOnly(entryDate);
+      if (parsed) {
+        const start = new Date(parsed.year, parsed.month - 1, parsed.day, 0, 0, 0, 0);
+        const end = new Date(parsed.year, parsed.month - 1, parsed.day, 23, 59, 59, 999);
+        query.createdAt = { $gte: start, $lte: end };
+      }
+    }
 
-    const leadsRaw = await Lead.find(query)
+    const leads = await Lead.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('createdBy', 'name email')
       .lean();
-
-    const leads = leadsRaw.map((lead: any) => ({
-      ...lead,
-      createdByDisplay:
-        typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER)
-          ? 'Public Link'
-          : lead.createdBy?.name || 'System',
-    }));
 
     const total = await Lead.countDocuments(query);
 
@@ -102,6 +159,11 @@ export async function POST(request: NextRequest) {
     const user = await User.findById(decoded.id).select('organizationId');
 
     const body = await request.json();
+    const normalizedEmail = normalizeEmail(body.email);
+    const normalizedPhone = normalizePhone(body.phone);
+    const normalizedFirstName = normalizeText(body.firstName);
+    const normalizedLastName = normalizeText(body.lastName);
+    const normalizedAddress = normalizeText(body.address);
 
     // Server-side validation for required fields
     const { applicationType, fields, ...rest } = body;
@@ -117,7 +179,7 @@ export async function POST(request: NextRequest) {
     const missingFields = [];
 
     for (const field of requiredFields) {
-      if (!fields[field.key]) {
+      if (!fields[field.key]?.toString().trim()) {
         missingFields.push(field.label);
       }
     }
@@ -133,15 +195,12 @@ export async function POST(request: NextRequest) {
     let duplicateReason = '';
     let existingLeadInfo = null;
 
-    // Build duplicate query with organization restriction for non-super_admin
-    let duplicateQuery: any = {};
-    if (decoded.role !== 'super_admin' && user?.organizationId) {
-      duplicateQuery.organizationId = user.organizationId;
-    }
+    // Build duplicate query with proper scope
+    let duplicateQuery: any = buildDuplicateScope(decoded, user);
 
     // Only check if email or phone is provided
-    if (body.email) {
-      duplicateQuery.email = body.email;
+    if (normalizedEmail) {
+      duplicateQuery = { ...duplicateQuery, emailNormalized: normalizedEmail };
 
       const duplicateEmail = await Lead.findOne(duplicateQuery)
         .populate('createdBy', 'name email');
@@ -149,26 +208,16 @@ export async function POST(request: NextRequest) {
       if (duplicateEmail) {
         isDuplicate = true;
         duplicateReason = 'email';
-        existingLeadInfo = {
-          id: duplicateEmail._id,
-          name: `${duplicateEmail.firstName} ${duplicateEmail.lastName}`,
-          status: duplicateEmail.status,
-          createdBy: duplicateEmail.createdBy ? duplicateEmail.createdBy.name : 'Unknown',
-          createdAt: duplicateEmail.createdAt
-        };
+        existingLeadInfo = buildLeadInfo(duplicateEmail);
       }
     }
 
-    // Reset duplicate query except for organization filter
-    if (decoded.role !== 'super_admin' && user?.organizationId) {
-      duplicateQuery = { organizationId: user.organizationId };
-    } else {
-      duplicateQuery = {};
-    }
+    // Reset duplicate query except for scope filter
+    duplicateQuery = buildDuplicateScope(decoded, user);
 
     // If not duplicate by email, check phone
-    if (!isDuplicate && body.phone) {
-      duplicateQuery.phone = body.phone;
+    if (!isDuplicate && normalizedPhone) {
+      duplicateQuery = { ...duplicateQuery, phoneNormalized: normalizedPhone };
 
       const duplicatePhone = await Lead.findOne(duplicateQuery)
         .populate('createdBy', 'name email');
@@ -176,13 +225,63 @@ export async function POST(request: NextRequest) {
       if (duplicatePhone) {
         isDuplicate = true;
         duplicateReason = 'phone number';
-        existingLeadInfo = {
-          id: duplicatePhone._id,
-          name: `${duplicatePhone.firstName} ${duplicatePhone.lastName}`,
-          status: duplicatePhone.status,
-          createdBy: duplicatePhone.createdBy ? duplicatePhone.createdBy.name : 'Unknown',
-          createdAt: duplicatePhone.createdAt
-        };
+        existingLeadInfo = buildLeadInfo(duplicatePhone);
+      }
+    }
+
+    duplicateQuery = buildDuplicateScope(decoded, user);
+
+    if (!isDuplicate && applicationType === 'Rideshare') {
+      const incidentPersonName = normalizeText(getFieldValue(fields, 'Incident Reported Person Name'));
+      const incidentPersonNumber = normalizePhone(getFieldValue(fields, 'Incident Reported Person Number'));
+
+      if (incidentPersonNumber) {
+        const rideshareLeads = await Lead.find({
+          ...duplicateQuery,
+          applicationType: 'Rideshare',
+          fields: {
+            $all: [
+              { $elemMatch: { key: 'Incident Reported Person Number' } }
+            ]
+          }
+        }).populate('createdBy', 'name email');
+
+        const duplicateIncidentPerson = rideshareLeads.find((lead: any) => {
+          const existingFields = Array.isArray(lead.fields) ? lead.fields : [];
+          const existingName = normalizeText(
+            existingFields.find((field: any) => field.key === 'Incident Reported Person Name')?.value
+          );
+          const existingNumber = normalizePhone(
+            existingFields.find((field: any) => field.key === 'Incident Reported Person Number')?.value
+          );
+
+          return existingNumber === incidentPersonNumber &&
+            (!incidentPersonName || !existingName || existingName === incidentPersonName);
+        });
+
+        if (duplicateIncidentPerson) {
+          isDuplicate = true;
+          duplicateReason = 'rideshare incident reported person details';
+          existingLeadInfo = buildLeadInfo(duplicateIncidentPerson);
+        }
+      }
+    }
+
+    duplicateQuery = buildDuplicateScope(decoded, user);
+
+    // Fallback check: same normalized name and address
+    if (!isDuplicate && normalizedFirstName && normalizedLastName && normalizedAddress) {
+      const duplicateNameAddress = await Lead.findOne({
+        ...duplicateQuery,
+        firstName: { $regex: new RegExp(`^${escapeRegex(normalizedFirstName)}$`, 'i') },
+        lastName: { $regex: new RegExp(`^${escapeRegex(normalizedLastName)}$`, 'i') },
+        address: { $regex: new RegExp(`^${escapeRegex(normalizedAddress)}$`, 'i') },
+      }).populate('createdBy', 'name email');
+
+      if (duplicateNameAddress) {
+        isDuplicate = true;
+        duplicateReason = 'name + address';
+        existingLeadInfo = buildLeadInfo(duplicateNameAddress);
       }
     }
 
@@ -198,7 +297,6 @@ export async function POST(request: NextRequest) {
     // Transform dynamic fields from object to array format
     const fieldsArray = [];
     if (body.fields && typeof body.fields === 'object') {
-      console.log("Received dynamic fields:", body.fields);
       for (const [key, value] of Object.entries(body.fields)) {
         if (value) { // Only add non-empty values
           fieldsArray.push({ key, value });
@@ -206,14 +304,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("Transformed fields for database:", fieldsArray);
-
     // Create the lead with proper fields format and assign organization
     const lead = await Lead.create({
       firstName: body.firstName,
       lastName: body.lastName,
       email: body.email,
+      emailNormalized: isDuplicate ? undefined : (normalizedEmail || undefined),
       phone: body.phone,
+      phoneNormalized: isDuplicate ? undefined : (normalizedPhone || undefined),
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       applicationType: body.applicationType,
@@ -246,6 +344,13 @@ export async function POST(request: NextRequest) {
       duplicateInfo: isDuplicate ? existingLeadInfo : null
     }, { status: 201 });
   } catch (error) {
+    const mongoError = error as { code?: number };
+    if (mongoError?.code === 11000) {
+      return NextResponse.json(
+        { message: 'Duplicate lead detected while saving. Please refresh and review the existing record.' },
+        { status: 409 }
+      );
+    }
     console.error('Error creating lead:', error);
     return NextResponse.json(
       { message: 'Server error', error: (error as Error).message },

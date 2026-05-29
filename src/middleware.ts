@@ -4,17 +4,38 @@ import { verifyTokenEdge, getAuthTokenEdge } from '@/lib/edge-auth';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Quick skip for all API routes
+  // Protect API routes (allow only auth endpoints without token)
   if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
+    const publicApiRoutes = ['/api/auth/login', '/api/auth/register'];
+    const isPublicApiRoute = publicApiRoutes.some(route => pathname.startsWith(route));
+    if (isPublicApiRoute) {
+      return NextResponse.next();
+    }
+
+    const token = getAuthTokenEdge(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      const decoded = await verifyTokenEdge(token);
+      if (!decoded) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      return NextResponse.next();
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const protectedRoutes = ['/dashboard', '/admin', '/leads'];
   const adminOnlyRoutes = ['/admin'];
+  const superAdminOnlyRoutes = ['/admin/sessions'];
   const authRoutes = ['/login', '/register'];
 
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAdminRoute = adminOnlyRoutes.some(route => pathname.startsWith(route));
+  const isSuperAdminRoute = superAdminOnlyRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
   const token = getAuthTokenEdge(request);
@@ -46,6 +67,10 @@ export async function middleware(request: NextRequest) {
       }
 
       if (isAdminRoute && !['admin', 'super_admin'].includes(decoded.role as string)) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      if (isSuperAdminRoute && decoded.role !== 'super_admin') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 

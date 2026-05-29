@@ -38,7 +38,7 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
 
   return (
     <Sidebar open={open} setOpen={setOpen}>
-      <SidebarBody className="justify-between gap-10 border-r bg-sidebar border-sidebar-border text-sidebar-foreground">
+      <SidebarBody className="justify-between gap-10 border-r border-white/10 bg-[#111114]">
         <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
           
           {/* Logo Section - Ensuring visibility in both states */}
@@ -49,11 +49,11 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
                 animate={{ opacity: 1 }} 
                 className="flex items-center justify-start w-full px-2"
               >
-                <img src="/logo.png" alt="Logo" className="h-25 w-auto object-contain" />
+                <img src="/logo.png" alt="Legal CRM" className="h-16 w-auto object-contain" />
               </motion.div>
             ) : (
               <div className="flex items-center justify-center w-full">
-                <img src="/logo.png" alt="Logo" className="h-8 w-8 object-contain shrink-0" />
+                <img src="/legal-crm-icon.svg" alt="Legal CRM" className="h-8 w-8 object-contain shrink-0" />
               </div>
             )}
           </Link>
@@ -66,7 +66,7 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
                   <motion.h2 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-sidebar-foreground/60"
+                    className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500"
                   >
                     {group.title}
                   </motion.h2>
@@ -84,7 +84,7 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
                           icon: React.cloneElement(item.icon as React.ReactElement, {
                             className: cn(
                               "h-6 w-6 shrink-0 transition-colors duration-200",
-                              isActive ? "text-primary" : "text-sidebar-foreground/70 group-hover/sidebar:text-sidebar-foreground"
+                              isActive ? "text-[#8b5cf6]" : "text-neutral-400 group-hover/sidebar:text-white"
                             )
                           })
                         }}
@@ -93,8 +93,8 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
                           // Correcting alignment: centered when closed, left-aligned when open
                           open ? "px-3 justify-start gap-3" : "px-0 justify-center w-full",
                           isActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            ? "bg-violet-500/10 text-[#8b5cf6]"
+                            : "text-neutral-400 hover:bg-white/5"
                         )}
                       />
                     );
@@ -106,7 +106,7 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
         </div>
 
         {/* Logout Section */}
-        <div className="pt-4 border-t border-sidebar-border">
+        <div className="pt-4 border-t border-white/5">
           <SidebarLink 
             link={{ 
               label: "Logout", 
@@ -117,7 +117,7 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
             className={cn(
               "rounded-xl flex items-center h-12 transition-all",
               open ? "px-3 justify-start gap-3" : "px-0 justify-center w-full",
-              "text-sidebar-foreground/70 hover:bg-rose-500/5 hover:text-rose-500"
+              "text-neutral-400 hover:bg-rose-500/5 hover:text-rose-500"
             )}
           />
         </div>

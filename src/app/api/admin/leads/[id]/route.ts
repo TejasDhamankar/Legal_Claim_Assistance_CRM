@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
-import { PUBLIC_INTAKE_NOTE_MARKER } from '@/lib/public-intake';
 
 export async function GET(
   request: NextRequest,
@@ -36,15 +35,6 @@ export async function GET(
       return NextResponse.json(
         { message: 'Lead not found' },
         { status: 404 }
-      );
-    }
-
-    const isPublicIntakeLead =
-      typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER);
-    if (userRole !== 'super_admin' && isPublicIntakeLead) {
-      return NextResponse.json(
-        { message: 'You do not have permission to view this lead' },
-        { status: 403 }
       );
     }
 
@@ -85,9 +75,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    console.log("Received request body:", body); // Added log
     const { status, notes, buyerCode } = body;
-    console.log("Received buyerCode:", buyerCode); // Added log
 
     const statusHistory = {
       fromStatus: (await Lead.findById(leadId).select('status')).status,
@@ -96,7 +84,6 @@ export async function PUT(
       changedBy: decoded.id
     };
 
-    console.log("Attempting to save buyerCode:", buyerCode); // Added log
     const updatedLead = await Lead.findByIdAndUpdate(
       leadId,
       {
@@ -112,8 +99,6 @@ export async function PUT(
         { status: 404 }
       );
     }
-
-    console.log("Lead after update:", updatedLead); // Added log
 
     return NextResponse.json({
       message: 'Lead updated successfully',

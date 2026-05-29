@@ -34,7 +34,8 @@ export type LeadStatus =
   | 'QC'
   | 'ID_VERIFIED'
   | 'CAMPAIGN_PAUSED'
-  | 'SENT_TO_LAW_FIRM';
+  | 'SENT_TO_LAW_FIRM'
+  | 'RETURNED';
 
 export interface StatusHistoryItem {
   _id?: string | ObjectId;
