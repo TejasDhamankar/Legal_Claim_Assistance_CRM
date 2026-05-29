@@ -79,7 +79,7 @@ export default function LoginClient() {
       >
         {/* Centered Logo Section */}
         <div className="flex flex-col items-center mb-8">
-            <img src="/logo.png" alt="Logo" className="h-50 w-50 object-contain" />
+            <img src="/logo.png" alt="Legal CRM" className="h-24 w-auto object-contain" />
         </div>
 
         {/* Updated Card Styling */}
@@ -118,11 +118,11 @@ export default function LoginClient() {
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="name@Legal Claim Assistance.com"
+                    placeholder="name@legalcrm.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 bg-white border-gray-300 text-gray-900 focus:ring-gray-500 focus:border-gray-500 rounded-lg"
@@ -136,7 +136,7 @@ export default function LoginClient() {
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                   <Input
                     id="password"
                     type="password"
@@ -174,7 +174,7 @@ export default function LoginClient() {
       </motion.div>
 
       <div className="mt-12 text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-600">
-        <p>© {new Date().getFullYear()} Legal Claim Assistance Systems — High Performance CRM</p>
+        <p>© {new Date().getFullYear()} Legal CRM - Enterprise Legal CRM</p>
       </div>
     </div>
   );

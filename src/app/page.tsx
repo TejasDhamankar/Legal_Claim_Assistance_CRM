@@ -17,13 +17,13 @@ export default function Home() {
               Accelerate your sales pipeline with{' '}
               {/* Gradient updated to your Electric Violet & Emerald theme */}
               <span className="text-gray-900">
-                Legal Claim Assistance
+                Legal CRM
               </span>
             </h1>
             
             <p className="mt-8 max-w-2xl mx-auto text-base text-gray-600 md:text-xl leading-relaxed">
-              The high-performance platform for tracking, managing, and converting leads. 
-              Built for speed, engineered for conversion.
+              The premium platform for tracking legal matters, managing claims, and converting client inquiries.
+              Built for law firms, consultants, and claim management teams.
             </p>
             
             <div className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center">

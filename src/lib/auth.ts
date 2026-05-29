@@ -4,20 +4,22 @@ import { UserType } from '@/types';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secure-jwt-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1d';
 const COOKIE_NAME = 'auth_token';
+
+const requireJwtSecret = () => {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return JWT_SECRET;
+};
 
 export const verifyToken = (token: string) => {
   try {
     // More explicit decoding with proper typing
-    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
-
-    console.log("Token successfully verified:", decoded);
-
-    if (!decoded.id) {
-      console.error("Token verified but missing ID:", decoded);
-    }
+    const secret = requireJwtSecret();
+    const decoded = jwt.verify(token, secret) as jwt.JwtPayload;
 
     return decoded;
   } catch (error) {
@@ -35,9 +37,8 @@ export const generateToken = (user: Partial<UserType> & { id?: string }) => {
       role: user.role,
     };
 
-    console.log('Generating token with payload:', payload);
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const secret = requireJwtSecret();
+    const token = jwt.sign(payload, secret, { expiresIn: JWT_EXPIRES_IN });
     return token;
   } catch (error) {
     console.error('Error generating token:', error);
@@ -47,10 +48,11 @@ export const generateToken = (user: Partial<UserType> & { id?: string }) => {
 
 export function getAuthToken(req: NextRequest): jwt.JwtPayload | null {
   const token = req.cookies.get('auth_token')?.value;
-  if (!token || !JWT_SECRET) return null;
+  if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    const secret = requireJwtSecret();
+    const decoded = jwt.verify(token, secret) as jwt.JwtPayload;
     return decoded;
   } catch (err) {
     console.error('[getAuthToken] Invalid token:', err);

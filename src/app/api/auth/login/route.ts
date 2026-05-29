@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateToken, comparePassword } from '@/lib/auth';
 import User from '@/models/User';
 import { dbConnect } from '@/lib/dbConnect';
+import {
+  createSessionId,
+  ensureSessionHeartbeat,
+  getRequestIp,
+  setSessionCookie,
+} from '@/lib/session-activity';
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -34,6 +40,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (user.active === false) {
+      return NextResponse.json(
+        { error: 'Your account is inactive. Please contact an administrator.' },
+        { status: 403 }
+      );
+    }
+
     // Create user object with proper ID format
     const userData = {
       id: user._id.toString(), // Use string ID
@@ -41,7 +54,6 @@ export async function POST(req: NextRequest) {
       role: user.role
     };
 
-    console.log('Creating token for user:', userData);
     const token = generateToken(userData);
 
     const response = NextResponse.json(
@@ -57,6 +69,27 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
+    const now = new Date();
+    const sessionId = createSessionId();
+    const ip = getRequestIp(req);
+
+    try {
+      await ensureSessionHeartbeat({
+        userId: user._id.toString(),
+        organizationId: user.organizationId?.toString(),
+        sessionId,
+        ip,
+        userAgent: req.headers.get('user-agent') || undefined,
+        now,
+      });
+
+      user.lastLogin = now;
+      await user.save();
+    } catch (sessionError) {
+      console.error('Session tracking failed during login:', sessionError);
+      // Do not block authentication if activity tracking fails.
+    }
+
     // Set the auth cookie with proper options
     response.cookies.set('auth_token', token, {
       httpOnly: true,
@@ -65,8 +98,7 @@ export async function POST(req: NextRequest) {
       path: '/',
       sameSite: 'lax'
     });
-
-    console.log('Login successful, set auth cookie for user:', user.email);
+    setSessionCookie(response, sessionId);
 
     return response;
   } catch (error) {

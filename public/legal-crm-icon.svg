@@ -1,0 +1,20 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Legal CRM Icon</title>
+  <desc id="desc">A scalable Legal CRM favicon with a shield, scales of justice, and CRM connection nodes.</desc>
+  <rect width="96" height="96" rx="18" fill="#FFFFFF"/>
+  <path d="M48 12L78 22.8V45.3C78 65.1 65.4 79.8 48 85C30.6 79.8 18 65.1 18 45.3V22.8L48 12Z" fill="#0F172A"/>
+  <path d="M48 20L70 28V45.4C70 60.3 61.2 71.8 48 76.3C34.8 71.8 26 60.3 26 45.4V28L48 20Z" fill="#2563EB"/>
+  <path d="M48 29V59" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M35 39H61" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M39 39L33 52" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M57 39L63 52" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M29 52H39C38.1 55.7 36.3 58 34 58C31.7 58 29.9 55.7 29 52Z" fill="#FFFFFF"/>
+  <path d="M57 52H67C66.1 55.7 64.3 58 62 58C59.7 58 57.9 55.7 57 52Z" fill="#FFFFFF"/>
+  <path d="M39 65H57" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="31" cy="31" r="5" fill="#C7D2FE"/>
+  <circle cx="65" cy="31" r="5" fill="#C7D2FE"/>
+  <circle cx="65" cy="66" r="5" fill="#C7D2FE"/>
+  <path d="M35.5 33.5L44 38" stroke="#C7D2FE" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M60.5 33.5L52 38" stroke="#C7D2FE" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M61.4 62.8L53.8 55.8" stroke="#C7D2FE" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

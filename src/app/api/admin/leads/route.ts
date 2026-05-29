@@ -2,7 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
-import { PUBLIC_INTAKE_NOTE_MARKER, PUBLIC_INTAKE_NOTE_REGEX } from '@/lib/public-intake';
+
+const parseDateOnly = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +46,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const createdBy = searchParams.get('createdBy');
     const buyerCode = searchParams.get('buyerCode');
+    const entryDate = searchParams.get('entryDate');
 
     // Build query
     const query: any = {};
@@ -35,26 +56,25 @@ export async function GET(request: NextRequest) {
     if (buyerCode) {
       query.buyerCode = buyerCode;
     }
+    if (entryDate) {
+      const parsed = parseDateOnly(entryDate);
+      if (parsed) {
+        const start = new Date(parsed.year, parsed.month - 1, parsed.day, 0, 0, 0, 0);
+        const end = new Date(parsed.year, parsed.month - 1, parsed.day, 23, 59, 59, 999);
+        query.createdAt = { $gte: start, $lte: end };
+      }
+    }
     if (userRole === 'admin') {
       query.createdBy = userId;
-      query.notes = { $not: PUBLIC_INTAKE_NOTE_REGEX };
     } else if (createdBy) {
       query.createdBy = createdBy;
     }
 
-    const leadsRaw = await Lead.find(query)
-      .select('firstName lastName email phone status applicationType createdAt buyerCode createdBy notes')
+    const leads = await Lead.find(query)
+      .select('firstName lastName email phone status applicationType createdAt buyerCode createdBy')
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
       .lean();
-
-    const leads = leadsRaw.map((lead: any) => ({
-      ...lead,
-      createdByDisplay:
-        typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER)
-          ? 'Public Link'
-          : lead.createdBy?.name || 'System',
-    }));
 
     return NextResponse.json({ leads });
   } catch (error) {

@@ -8,8 +8,11 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Legal Claim Assistance',
-  description: 'A system for managing leads efficiently',
+  title: 'Legal CRM',
+  description: 'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+  icons: {
+    icon: '/legal-crm-icon.svg',
+  },
 };
 
 export default function RootLayout({

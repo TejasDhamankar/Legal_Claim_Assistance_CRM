@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthToken } from '@/lib/auth';
 import Lead from '@/models/Lead';
 import { dbConnect } from '@/lib/dbConnect';
-import { PUBLIC_INTAKE_NOTE_MARKER } from '@/lib/public-intake';
+import { DYNAMIC_FIELDS } from '@/lib/dynamic-fields';
 
 export async function GET(
   request: NextRequest,
@@ -21,12 +21,6 @@ export async function GET(
       .populate('statusHistory.changedBy', 'name email');
 
     if (!lead) return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
-
-    const isPublicIntakeLead =
-      typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER);
-    if (decoded.role !== 'super_admin' && isPublicIntakeLead) {
-      return NextResponse.json({ message: 'Access Denied' }, { status: 403 });
-    }
 
     if (decoded.role !== 'super_admin' &&
         lead.createdBy && lead.createdBy._id.toString() !== decoded.id) {
@@ -52,22 +46,34 @@ export async function PUT(
     const { id: leadId } = await params;
     const body = await request.json();
 
+    if (decoded.role !== 'super_admin') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
+    }
+
     const lead = await Lead.findById(leadId);
     if (!lead) return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
 
-    const isPublicIntakeLead =
-      typeof lead.notes === 'string' && lead.notes.includes(PUBLIC_INTAKE_NOTE_MARKER);
-    if (decoded.role !== 'super_admin' && isPublicIntakeLead) {
-      return NextResponse.json({ message: 'Access Denied' }, { status: 403 });
-    }
+    const applicationType = body.applicationType || lead.applicationType;
+    const incomingFields = body.fields && typeof body.fields === 'object'
+      ? body.fields
+      : Array.isArray(lead.fields)
+        ? lead.fields.reduce((acc: Record<string, string>, field: { key: string; value: string }) => {
+            if (field?.key) acc[field.key] = field.value || '';
+            return acc;
+          }, {})
+        : {};
 
-    if (decoded.role !== 'super_admin' &&
-        lead.createdBy && lead.createdBy.toString() !== decoded.id) {
-      return NextResponse.json({ message: 'Access Denied' }, { status: 403 });
-    }
+    const dynamicFieldsConfig = DYNAMIC_FIELDS[applicationType] || [];
+    const isJuvenileAbuse = applicationType === 'Juvenile Detention Center (JDC)';
+    const requiredFields = isJuvenileAbuse
+      ? dynamicFieldsConfig.filter(f => f.key === 'Location Of Incident')
+      : dynamicFieldsConfig.filter(f => f.required);
+    const missingFields = requiredFields.filter(field => !incomingFields[field.key]?.toString().trim());
 
-    if (body.status && decoded.role !== 'super_admin') {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        message: `Missing required fields: ${missingFields.map(field => field.label).join(', ')}`,
+      }, { status: 400 });
     }
 
     // Handle status history and dynamic fields as before
@@ -90,7 +96,7 @@ export async function PUT(
     }
 
     // Update basic fields
-    const updateable = ['firstName', 'lastName', 'email', 'phone', 'address', 'applicationType', 'lawsuit', 'notes'];
+    const updateable = ['firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 'address', 'applicationType', 'lawsuit', 'notes'];
     updateable.forEach(field => { if (body[field]) lead[field] = body[field]; });
 
     await lead.save();

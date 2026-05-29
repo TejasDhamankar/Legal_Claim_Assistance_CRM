@@ -39,6 +39,8 @@ export const DYNAMIC_FIELDS: Record<
   /* ───────────────────────── RIDESHARE ────────────────────────── */
   'Rideshare': [
     { key: 'Incident Date', label: 'Date Of Incident', type: 'date', required: true },
+    { key: 'Incident Reported Person Name', label: 'Name Of The Person Incident Reported', type: 'text', required: true },
+    { key: 'Incident Reported Person Number', label: 'Number Of The Person Incident Reported', type: 'phone', required: true },
     { key: 'Type Of Assault', label: 'Type Of Assault', type: 'radio', required: true, options: [
         { label: 'Exposure Of Genitals', value: 'Exposure of genitals' },
         { label: 'Fondling', value: 'Fondling' },
