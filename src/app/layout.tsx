@@ -9,9 +9,27 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Legal CRM',
-  description: 'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+  description:
+    'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+
   icons: {
     icon: '/legal-crm-icon.svg',
+  },
+
+  openGraph: {
+    title: 'Legal CRM',
+    description:
+      'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+    images: ['/logo.png'],
+    type: 'website',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Legal CRM',
+    description:
+      'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+    images: ['/logo.png'],
   },
 };
 
