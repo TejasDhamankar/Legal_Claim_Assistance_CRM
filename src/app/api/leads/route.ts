@@ -105,7 +105,8 @@ export async function GET(request: NextRequest) {
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { phone: { $regex: search, $options: 'i' } },
+        { lawsuit: { $regex: search, $options: 'i' } },
       ];
     }
     if (entryDate) {
@@ -315,7 +316,9 @@ export async function POST(request: NextRequest) {
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       applicationType: body.applicationType,
-      lawsuit: body.lawsuit,
+      lawsuit: (typeof body.lawsuit === 'string' && body.lawsuit.trim())
+        ? body.lawsuit.trim()
+        : (body.applicationType || ''),
       notes: notes,
       status: status,
       fields: fieldsArray,

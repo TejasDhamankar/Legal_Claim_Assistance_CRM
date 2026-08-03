@@ -49,11 +49,11 @@ export default function DashboardSidebar({ onLogout, open, setOpen }: any) {
                 animate={{ opacity: 1 }} 
                 className="flex items-center justify-start w-full px-2"
               >
-                <img src="/logo.png" alt="Legal CRM" className="h-16 w-auto object-contain" />
+                <img src="/lexora-logo.svg" alt="Lexora" className="h-16 w-auto object-contain" />
               </motion.div>
             ) : (
               <div className="flex items-center justify-center w-full">
-                <img src="/legal-crm-icon.svg" alt="Legal CRM" className="h-8 w-8 object-contain shrink-0" />
+                <img src="/lexora-icon.svg" alt="Lexora" className="h-8 w-8 object-contain shrink-0" />
               </div>
             )}
           </Link>

@@ -140,6 +140,105 @@ export const DYNAMIC_FIELDS: Record<
     { key: 'Hospital Name', label: 'Hospital Name', type: 'text' }
   ],
 
+  /* ───────────────────────── CALIFORNIA PRISON SEXUAL ABUSE ───── */
+  // Core contact fields (name, phone, DOB, email, notes, address) live on the lead form.
+  'California Prison Sexual Abuse': [
+    {
+      key: 'State Where Abuse Happened',
+      label: 'State where abuse happened',
+      type: 'text',
+      required: true,
+    },
+    {
+      key: 'Institution',
+      label: 'Which institution did the abuse occur in',
+      type: 'radio',
+      required: true,
+      options: [
+        { label: 'California Juvenile Detention Center', value: 'California Juvenile Detention Center' },
+        { label: "Chowchilla Women's Prison", value: "Chowchilla Women's Prison" },
+        { label: "California Women's Prison", value: "California Women's Prison" },
+        { label: 'Illinois Juvenile Detention Center', value: 'Illinois Juvenile Detention Center' },
+        { label: 'None of the above', value: 'None of the above' },
+      ],
+    },
+    {
+      key: 'Abuse Type',
+      label: 'Abuse type',
+      type: 'radio',
+      required: true,
+      options: [
+        { label: 'Physical', value: 'Physical' },
+        { label: 'Virtual', value: 'Virtual' },
+        { label: 'Both', value: 'Both' },
+      ],
+    },
+    {
+      key: 'Evidence Of Abuse',
+      label: 'Do you currently have or can you get the evidence of the abuse?',
+      type: 'radio',
+      required: true,
+      options: [
+        { label: 'Physical abuse injury', value: 'Physical abuse injury' },
+        { label: 'Rape or Statutory Rape', value: 'Rape or Statutory Rape' },
+        { label: 'Attempted rape or attempted statutory rape', value: 'Attempted rape or attempted statutory rape' },
+        { label: 'Sexual assault', value: 'Sexual assault' },
+        { label: 'Manual stimulation', value: 'Manual stimulation' },
+        { label: 'Oral copulation', value: 'Oral copulation' },
+        { label: 'Digital penetration', value: 'Digital penetration' },
+        { label: 'Touching or kissing of sexual body part, may be over or under clothing', value: 'Touching or kissing of sexual body part, may be over or under clothing' },
+        { label: 'Sexual Trafficking', value: 'Sexual Trafficking' },
+        { label: 'Meeting in person with intent to assault', value: 'Meeting in person with intent to assault' },
+        { label: 'None of above', value: 'None of above' },
+      ],
+    },
+  ],
+
+  /* ───────────────────────── JUVENILE DETENTION ────────────────── */
+  // Core contact fields (name, phone, DOB, email, notes) live on the lead form.
+  'Juvenile Detention': [
+    {
+      key: "Victim's Name",
+      label: "Victim's Name",
+      type: 'text',
+      required: true,
+    },
+    {
+      key: 'Abuse Type',
+      label: 'Abuse Type',
+      type: 'text',
+      required: true,
+    },
+    {
+      key: 'JID Number',
+      label: '(JID) Juvenile ID Number/Detention ID or Booking Number',
+      type: 'text',
+      required: true,
+    },
+    {
+      key: 'Tried To Report Abuse',
+      label: 'Tried to report abuse or seek medical attention',
+      type: 'radio',
+      required: true,
+      options: [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' },
+      ],
+    },
+    {
+      key: 'Abuse Year',
+      label: 'Abuse Year',
+      type: 'text',
+      required: true,
+    },
+    {
+      key: 'Facility Name',
+      label: 'Facility Name',
+      type: 'text',
+      required: true,
+    },
+  ],
+
   /* ───────────────────────── AFFF ──────────────────────────────── */
   'AFFF': [
     { key: 'Exposed To AFFF', label: 'Were You Or A Loved One Exposed To AFFF', type: 'radio' },

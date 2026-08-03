@@ -1,44 +1,47 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Zap, ArrowRight, BarChart3, Users2, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { BRAND } from '@/lib/brand';
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-stone-50 text-foreground font-sans">
-      <main className="flex-1 relative">
-        {/* Background Glow Effect Removed */}
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            'radial-gradient(1000px 500px at 50% -10%, oklch(0.93 0.02 240 / 70%), transparent 55%), oklch(0.975 0.006 240)',
+        }}
+      />
 
-        <section className="relative overflow-hidden py-20 md:py-32">
-          <div className="container relative z-10 mx-auto px-4 text-center">
-            
-            <h1 className="mx-auto max-w-4xl text-3xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:leading-[1.1] text-gray-900">
-              Accelerate your sales pipeline with{' '}
-              {/* Gradient updated to your Electric Violet & Emerald theme */}
-              <span className="text-gray-900">
-                Legal CRM
-              </span>
-            </h1>
-            
-            <p className="mt-8 max-w-2xl mx-auto text-base text-gray-600 md:text-xl leading-relaxed">
-              The premium platform for tracking legal matters, managing claims, and converting client inquiries.
-              Built for law firms, consultants, and claim management teams.
-            </p>
-            
-            <div className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center">
-              <Link href="/login">
-                {/* Button updated to Violet with a custom glow */}
-                <Button size="lg" className="h-14 px-10 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-xl transition-all duration-300">
-                  Get Started <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
+      <header className="flex items-center justify-between px-6 py-5 md:px-10">
+        <Image src="/lexora-logo.svg" alt={BRAND.name} width={140} height={40} className="h-8 w-auto" priority />
+        <Link href="/login">
+          <Button variant="outline" size="sm">Sign in</Button>
+        </Link>
+      </header>
 
-            {/* Subtle grid background to add texture */}
-            <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-          </div>
-        </section>
+      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
+        <p className="text-xs font-medium tracking-[0.18em] uppercase text-muted-foreground mb-4">
+          {BRAND.tagline}
+        </p>
+        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-[3.25rem] md:leading-[1.1]">
+          Pipeline control for modern claims teams
+        </h1>
+        <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-lg leading-relaxed">
+          {BRAND.description}
+        </p>
+        <div className="mt-10">
+          <Link href="/login">
+            <Button size="lg" className="h-11 px-7 gap-2 shadow-sm">
+              Open workspace <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </main>
     </div>
   );

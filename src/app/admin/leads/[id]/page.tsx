@@ -86,7 +86,7 @@ const LEAD_STATUSES = [
   "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID","SIGNED","VM","TRANSFERRED","SEND TO ANOTHER BUYER",
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
-  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED"
+  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED", "REFRESH"
 ];
 
 // Define the schema for updating lead status
@@ -436,51 +436,27 @@ export default function LeadDetailsPage() {
                     Personal Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 gap-1">
-                    <span className="text-sm font-medium text-muted-foreground">Full Name</span>
-                    <span>{lead.firstName} {lead.lastName}</span>
+                <CardContent className="space-y-0 divide-y">
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground">Full name</span>
+                    <span className="text-sm font-medium break-words">{lead.firstName} {lead.lastName}</span>
                   </div>
-
-                  {lead.dateOfBirth && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Date of Birth</span>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{formatDisplayDate(lead.dateOfBirth)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.email && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Email Address</span>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span>{lead.email}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.phone && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Phone Number</span>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{lead.phone}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.address && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Address</span>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{lead.address}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4" /> Date of birth</span>
+                    <span className="text-sm font-medium break-words">{formatDisplayDate(lead.dateOfBirth) || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2"><Mail className="h-4 w-4" /> Email</span>
+                    <span className="text-sm font-medium break-all">{lead.email || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2"><Phone className="h-4 w-4" /> Phone</span>
+                    <span className="text-sm font-medium break-words">{lead.phone || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> Address</span>
+                    <span className="text-sm font-medium whitespace-pre-wrap break-words">{lead.address || '—'}</span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -491,30 +467,19 @@ export default function LeadDetailsPage() {
                     Application Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {lead.applicationType && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Application Type</span>
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-muted-foreground" />
-                        <span>{lead.applicationType}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.lawsuit && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Lawsuit</span>
-                      <span>{lead.lawsuit}</span>
-                    </div>
-                  )}
-
-                  {lead.buyerCode && (
-                    <div className="grid grid-cols-1 gap-1">
-                      <span className="text-sm font-medium text-muted-foreground">Buyer Code</span>
-                      <span>{lead.buyerCode}</span>
-                    </div>
-                  )}
+                <CardContent className="space-y-0 divide-y">
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4" /> Application type</span>
+                    <span className="text-sm font-medium break-words">{lead.applicationType || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground">Lawsuit</span>
+                    <span className="text-sm font-medium break-words">{lead.lawsuit || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
+                    <span className="text-sm text-muted-foreground">Buyer code</span>
+                    <span className="text-sm font-medium break-words">{lead.buyerCode || '—'}</span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -598,37 +563,53 @@ export default function LeadDetailsPage() {
 
           {/* Custom Fields Tab */}
           <TabsContent value="fields">
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ClipboardList className="h-5 w-5" />
-                  Custom Fields
+                  Application answers
                 </CardTitle>
                 <CardDescription>
-                  Additional information specific to this lead
+                  All questionnaire and custom field responses for this lead
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {lead.fields && lead.fields.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {lead.fields.map((field, index) => {
-                      let fieldValue = field.value;
-                      
-                      // Get field definition from DYNAMIC_FIELDS
-                      const appFields = DYNAMIC_FIELDS[lead.applicationType] || [];
-                      const fieldDef = appFields.find(f => f.key === field.key);
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-y bg-muted/40 text-left">
+                          <th className="px-6 py-3 font-medium text-muted-foreground w-[40%] min-w-[180px]">
+                            Question / field
+                          </th>
+                          <th className="px-6 py-3 font-medium text-muted-foreground">
+                            Response
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lead.fields.map((field, index) => {
+                          let fieldValue = field.value || '—';
+                          const appFields = DYNAMIC_FIELDS[lead.applicationType] || [];
+                          const fieldDef = appFields.find(f => f.key === field.key);
 
-                      if (fieldDef?.type === 'date') {
-                        fieldValue = formatDisplayDate(field.value);
-                      }
+                          if (fieldDef?.type === 'date' && field.value) {
+                            fieldValue = formatDisplayDate(field.value) || field.value;
+                          }
 
-                      return (
-                        <div key={index} className="border rounded-md p-3">
-                          <span className="text-sm font-medium text-muted-foreground">{fieldDef?.label || field.key}</span>
-                          <p className="mt-1">{fieldValue}</p>
-                        </div>
-                      );
-                    })}
+                          return (
+                            <tr key={index} className="border-b last:border-0 align-top">
+                              <td className="px-6 py-3.5 text-muted-foreground whitespace-normal break-words">
+                                {fieldDef?.label || field.key}
+                              </td>
+                              <td className="px-6 py-3.5 font-medium text-foreground whitespace-pre-wrap break-words">
+                                {fieldValue}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">

@@ -23,8 +23,8 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
   if (authLoading || (authChecked && !user)) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
+        <p className="mt-4 text-sm text-muted-foreground">Loading workspace…</p>
       </div>
     );
   }
@@ -32,15 +32,13 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {/* This is your new shadcn sidebar replacing the old one */}
         {!hideSidebar && <AppSidebar />}
 
-        <SidebarInset className="flex flex-col bg-background overflow-x-hidden">
-          {/* SiteHeader handles the Top Bar and Breadcrumbs */}
+        <SidebarInset className="flex flex-col bg-transparent overflow-x-hidden">
           <SiteHeader />
 
-          <main className="flex flex-1 flex-col w-full min-w-0 h-full overflow-y-auto overflow-x-hidden bg-background">
-            <div className="p-4 md:p-10 w-full max-w-[1600px] mx-auto overflow-hidden">
+          <main className="flex flex-1 flex-col w-full min-w-0 h-full overflow-y-auto overflow-x-hidden">
+            <div className="p-5 md:p-8 lg:p-10 w-full max-w-[1440px] mx-auto">
               {children}
             </div>
           </main>

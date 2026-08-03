@@ -202,7 +202,7 @@ export default function CreateLeadClient({ mode = 'create', leadId }: CreateLead
       const isRequired =
         selectedType === 'Juvenile Detention Center (JDC)'
           ? field.key === 'Location Of Incident'
-          : field.required;
+          : Boolean(field.required);
 
       let inputComponent;
       if (field.type === 'date') {
@@ -213,9 +213,12 @@ export default function CreateLeadClient({ mode = 'create', leadId }: CreateLead
           />
         );
       } else if (field.type === 'text' || field.type === 'email' || field.type === 'phone') {
-        const placeholder = selectedType === 'Juvenile Detention Center (JDC)' && field.key === 'Location Of Incident'
-          ? 'Enter Juvenile Detention Center (JDC) name'
-          : `Enter ${field.label.toLowerCase()}`;
+        const placeholder =
+          selectedType === 'Juvenile Detention Center (JDC)' && field.key === 'Location Of Incident'
+            ? 'Enter juvenile detention facility name'
+            : selectedType === 'Juvenile Detention' && field.key === 'Facility Name'
+            ? 'Enter facility name'
+            : `Enter ${field.label.toLowerCase()}`;
         inputComponent = (
           <Input
             type={field.type}

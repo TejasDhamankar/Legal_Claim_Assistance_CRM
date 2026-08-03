@@ -27,6 +27,19 @@ export async function GET(request: NextRequest) {
     // 2. Existing Total Count
     const totalLeads = await Lead.countDocuments(leadFilter);
 
+    // 2b. Lawsuit breakdown for dashboard chips
+    const lawsuitCounts = await Lead.aggregate([
+      { $match: leadFilter },
+      {
+        $group: {
+          _id: { $ifNull: ["$lawsuit", "Unassigned"] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 12 },
+    ]);
+
     // 3. NEW: Time-Series Data for the Area Chart (Last 24 Hours)
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const chartDataRaw = await Lead.aggregate([
@@ -62,6 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       statusCounts,
       totalLeads,
+      lawsuitCounts,
       recentActivity,
       chartData: chartData.length > 0 ? chartData : [{ name: 'No Data', value: 0 }]
     });

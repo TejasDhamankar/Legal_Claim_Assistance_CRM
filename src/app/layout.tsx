@@ -1,35 +1,37 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { BRAND } from '@/lib/brand';
 
-const inter = Inter({ subsets: ['latin'] });
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'Legal CRM',
-  description:
-    'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
+  title: BRAND.name,
+  description: BRAND.description,
 
   icons: {
-    icon: '/legal-crm-icon.svg',
+    icon: '/lexora-icon.svg',
   },
 
   openGraph: {
-    title: 'Legal CRM',
-    description:
-      'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
-    images: ['/logo.png'],
+    title: BRAND.name,
+    description: BRAND.description,
+    images: ['/lexora-logo.svg'],
     type: 'website',
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'Legal CRM',
-    description:
-      'Enterprise-grade CRM for legal teams, consultants, and claim management companies.',
-    images: ['/logo.png'],
+    title: BRAND.name,
+    description: BRAND.description,
+    images: ['/lexora-logo.svg'],
   },
 };
 
@@ -39,10 +41,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // We keep the "dark" class here so your midnight indigo theme 
-    // is active on the Landing and Login pages too.
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.className, "bg-background text-foreground antialiased")}>
+      <body className={cn(jakarta.variable, "font-sans bg-background text-foreground antialiased")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

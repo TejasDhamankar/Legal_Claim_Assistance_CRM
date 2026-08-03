@@ -55,7 +55,8 @@ const leadSchema = new mongoose.Schema({
   "BILLABLE",
   "CAMPAIGN_PAUSED",
   "SENT_TO_LAW_FIRM",
-  "RETURNED"
+  "RETURNED",
+  "REFRESH"
 ],
 
     default: "PENDING",

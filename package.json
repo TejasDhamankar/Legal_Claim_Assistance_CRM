@@ -1,6 +1,6 @@
 {
-  "name": "Legal Claim Assistance",
-  "description": "A system for managing leads efficiently",
+  "name": "lexora",
+  "description": "Lexora — CRM for claims and legal operations",
   "version": "0.1.0",
   "private": true,
   "scripts": {

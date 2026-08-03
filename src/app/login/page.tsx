@@ -1,27 +1,23 @@
 import { Suspense } from 'react';
-import { Zap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import LoginClient from '@/components/loginClient';
+import { brandTitle, BRAND } from '@/lib/brand';
 
-export const metadata = { 
-  title: 'Sign In | Legal CRM',
-  description: 'Access your legal CRM dashboard.'
+export const metadata = {
+  title: brandTitle('Sign In'),
+  description: `Access your ${BRAND.name} workspace.`,
 };
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      // Updated to Midnight Indigo background
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
-        <div className="relative flex items-center justify-center">
-          {/* Subtle Electric Violet pulse effect */}
-          <div className="absolute h-16 w-16 animate-ping rounded-full bg-[#8b5cf6]/20" />
-          <Zap className="h-10 w-10 text-[#8b5cf6] animate-pulse fill-[#8b5cf6]/20" />
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+          <Loader2 className="h-7 w-7 animate-spin text-primary/70" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
         </div>
-        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">
-          Initializing Legal CRM...
-        </p>
-      </div>
-    }>
+      }
+    >
       <LoginClient />
     </Suspense>
   );

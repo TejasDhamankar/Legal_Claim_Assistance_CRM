@@ -8,48 +8,36 @@ import { format } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Loader2, ArrowLeft, History, Clock, Edit, Mail, Phone, Calendar, 
-  MapPin, FileText, BookOpen, User, CheckCircle, Activity, 
-  ChevronRight, Layers, ShieldCheck, Zap, 
-  XCircle, UserCircle2, Info, Briefcase
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Loader2, ArrowLeft, History, Edit, Mail, Phone, Calendar,
+  MapPin, FileText, User, Briefcase, ClipboardList, Hash,
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
-import { LeadStatus } from '@/types';
-import { motion } from 'framer-motion';
-
-// Helper to capitalize only the first letter
-const formatSentenceCase = (str: string) => {
-  if (!str) return '—';
-  const lowercase = str.toLowerCase();
-  return lowercase.charAt(0).toUpperCase() + lowercase.slice(1).replace(/_/g, ' ');
-};
-
-// Lead Status Configuration
-const STATUS_CONFIG: Record<string, { color: string, icon: React.ReactNode }> = {
-  PENDING: { color: '#f59e0b', icon: <Clock className="h-4 w-4" /> },
-  REJECTED: { color: '#ef4444', icon: <XCircle className="h-4 w-4" /> },
-  VERIFIED: { color: '#10b981', icon: <CheckCircle className="h-4 w-4" /> },
-  PAID: { color: '#3b82f6', icon: <Zap className="h-4 w-4" /> },
-  WORKING: { color: '#6366f1', icon: <Activity className="h-4 w-4" /> },
-};
+import { STATUS_CONFIG } from '@/app/dashboard/status-registry';
+import { DYNAMIC_FIELDS } from '@/lib/dynamic-fields';
+import { cn } from '@/lib/utils';
 
 const LEAD_STATUSES = [
-  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID","SIGNED","VM","TRANSFERRED","SEND TO ANOTHER BUYER",
+  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT", "POSTED", "PAID", "SIGNED", "VM", "TRANSFERRED", "SEND TO ANOTHER BUYER",
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
-  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "BILLABLE","CAMPAIGN_PAUSED", "SENT_TO_LAW_FIRM", "RETURNED"
+  "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "BILLABLE", "CAMPAIGN_PAUSED", "SENT_TO_LAW_FIRM", "RETURNED", "REFRESH"
 ];
 
 const statusUpdateSchema = z.object({
@@ -59,6 +47,121 @@ const statusUpdateSchema = z.object({
 
 type StatusFormValues = z.infer<typeof statusUpdateSchema>;
 
+function formatStatus(status?: string) {
+  if (!status) return '—';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDisplayDate(value?: string | Date | null) {
+  if (!value) return '—';
+  try {
+    const str = typeof value === 'string' ? value : value.toISOString();
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const year = parseInt(str.substring(0, 4), 10);
+      const month = parseInt(str.substring(5, 7), 10);
+      const day = parseInt(str.substring(8, 10), 10);
+      return format(new Date(year, month - 1, day), 'MMMM d, yyyy');
+    }
+    return format(new Date(value), 'MMMM d, yyyy');
+  } catch {
+    return String(value);
+  }
+}
+
+function formatDateTime(value?: string | Date | null) {
+  if (!value) return '—';
+  try {
+    const d = new Date(value);
+    return {
+      date: format(d, 'MMM d, yyyy'),
+      time: format(d, 'h:mm a'),
+    };
+  } catch {
+    return { date: String(value), time: '' };
+  }
+}
+
+function isProbablyDate(value: string) {
+  if (!value || /^\d+$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}/.test(value) && !/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value)) return false;
+  const t = Date.parse(value);
+  return !Number.isNaN(t);
+}
+
+function formatFieldValue(value: unknown, type?: string) {
+  if (value === null || value === undefined || value === '') return '—';
+  const str = String(value);
+  if (type === 'date' || isProbablyDate(str)) return formatDisplayDate(str);
+  return str;
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function DetailRow({
+  label,
+  value,
+  icon: Icon,
+  href,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+  href?: string;
+}) {
+  const content = value === null || value === undefined || value === '' ? '—' : value;
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-[220px_minmax(0,1fr)] gap-1.5 sm:gap-6 py-3.5 border-b border-border/70 last:border-b-0">
+      <dt className="flex items-start gap-2 text-sm text-muted-foreground pt-0.5">
+        {Icon ? <Icon className="h-4 w-4 shrink-0 mt-0.5 opacity-70" /> : null}
+        <span>{label}</span>
+      </dt>
+      <dd className="text-sm text-foreground font-medium break-words whitespace-pre-wrap min-w-0">
+        {href && content !== '—' ? (
+          <a href={href} className="text-primary hover:underline underline-offset-2 break-all">
+            {content}
+          </a>
+        ) : (
+          content
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  description,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  description?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="shadow-none border-border/80 bg-card/90 gap-0 py-0 overflow-hidden">
+      <CardHeader className="px-5 py-4 border-b border-border/70 bg-muted/20">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          {title}
+        </CardTitle>
+        {description ? (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        ) : null}
+      </CardHeader>
+      <CardContent className="px-5 py-1">
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function LeadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -66,7 +169,6 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
 
   const form = useForm<StatusFormValues>({
     resolver: zodResolver(statusUpdateSchema),
@@ -81,247 +183,366 @@ export default function LeadDetailPage() {
       const { data } = await axios.get(`/api/leads/${id}`);
       setLead(data.lead);
       form.setValue('status', data.lead.status);
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Record not found.", variant: "destructive" });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onUpdateStatus: SubmitHandler<StatusFormValues> = async (values) => {
     try {
-      const { data } = await axios.put(`/api/leads/${id}`, { status: values.status, statusNote: values.notes });
+      const { data } = await axios.put(`/api/leads/${id}`, {
+        status: values.status,
+        statusNote: values.notes,
+      });
       setLead(data.lead);
       toast({ title: "Success", description: "Status updated." });
       setStatusDialogOpen(false);
-    } catch (err) {
+      form.setValue('notes', '');
+    } catch {
       toast({ title: "Error", description: "Update failed.", variant: "destructive" });
     }
   };
 
-  if (loading) return (
-    <DashboardLayout>
-      <div className="flex h-[80vh] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    </DashboardLayout>
-  );
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[70vh] w-full items-center justify-center">
+          <Loader2 className="h-7 w-7 animate-spin text-primary/70" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const currentStatus = STATUS_CONFIG[lead.status] || { color: '#737373', icon: <FileText /> };
+  if (!lead) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[70vh] flex-col items-center justify-center gap-3">
+          <p className="text-sm text-muted-foreground">Lead not found.</p>
+          <Button variant="outline" onClick={() => router.push('/leads')}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to leads
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const statusMeta = STATUS_CONFIG[lead.status];
+  const statusColor = statusMeta?.color || '#64748b';
+  const created = formatDateTime(lead.createdAt);
+  const updated = formatDateTime(lead.updatedAt);
+  const appFieldDefs = DYNAMIC_FIELDS[lead.applicationType] || [];
+
+  const customFields = (lead.fields || []).map((f: { key: string; value: string }) => {
+    const def = appFieldDefs.find((d) => d.key === f.key);
+    return {
+      key: f.key,
+      label: def?.label || f.key,
+      value: formatFieldValue(f.value, def?.type),
+    };
+  });
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1400px] mx-auto space-y-6 pb-12">
-        
-        {/* TOP NAVIGATION & ACTION BAR */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-background p-4 border rounded-xl shadow-sm">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()} className="rounded-full">
+      <div className="max-w-[1200px] mx-auto space-y-6 pb-10">
+
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3 min-w-0">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push('/leads')}
+              className="shrink-0 h-9 w-9"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground break-words">
                 {lead.firstName} {lead.lastName}
-                <Badge variant="secondary" className="text-[10px] font-mono">ID: {lead._id.slice(-6).toUpperCase()}</Badge>
               </h1>
-              <p className="text-xs text-muted-foreground font-medium capitalize tracking-tight">Lead detail profile</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="font-medium capitalize"
+                  style={{
+                    color: statusColor,
+                    borderColor: hexToRgba(statusColor, 0.35),
+                    backgroundColor: hexToRgba(statusColor, 0.08),
+                  }}
+                >
+                  {formatStatus(lead.status)}
+                </Badge>
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                  <Hash className="h-3 w-3" />
+                  {lead._id}
+                </span>
+              </div>
+              {statusMeta?.description && (
+                <p className="text-sm text-muted-foreground max-w-xl">
+                  {statusMeta.description}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1.5 border rounded-lg flex items-center gap-2 bg-muted/30">
-              <span style={{ color: currentStatus.color }}>{currentStatus.icon}</span>
-              <span className="text-[11px] font-bold capitalize">{lead.status.toLowerCase().replace(/_/g, ' ')}</span>
-            </div>
-            {user?.role === 'super_admin' && (
-              <Button onClick={() => setStatusDialogOpen(true)} size="sm" className="font-bold">
-                <Edit className="mr-2 h-4 w-4" /> Update
-              </Button>
-            )}
-          </div>
+          {user?.role === 'super_admin' && (
+            <Button onClick={() => setStatusDialogOpen(true)} className="shrink-0 gap-2">
+              <Edit className="h-4 w-4" />
+              Update status
+            </Button>
+          )}
         </div>
 
-        {/* MAIN MODULES */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <div className="lg:col-span-8 space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="bg-muted/50 p-1 rounded-lg">
-                <TabsTrigger value="overview" className="px-6 py-2 text-xs font-bold capitalize">Overview</TabsTrigger>
-                <TabsTrigger value="fields" className="px-6 py-2 text-xs font-bold capitalize">Raw data</TabsTrigger>
-              </TabsList>
+        {/* Meta strip */}
+        <Card className="shadow-none border-border/80 bg-card/90 py-0 gap-0">
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/70">
+              <div className="px-5 py-4">
+                <p className="text-xs text-muted-foreground mb-1">Created</p>
+                <p className="text-sm font-medium">{created.date}</p>
+                <p className="text-xs text-muted-foreground">{created.time}</p>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-xs text-muted-foreground mb-1">Last updated</p>
+                <p className="text-sm font-medium">{updated.date}</p>
+                <p className="text-xs text-muted-foreground">{updated.time}</p>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-xs text-muted-foreground mb-1">Created by</p>
+                <p className="text-sm font-medium break-words">{lead.createdBy?.name || 'System'}</p>
+                {lead.createdBy?.email && (
+                  <p className="text-xs text-muted-foreground break-all">{lead.createdBy.email}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              <TabsContent value="overview" className="mt-4 space-y-6">
-                
-                {/* INFO CARDS GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="shadow-none border border-slate-200">
-                    <CardHeader className="pb-3 border-b bg-muted/20">
-                      <CardTitle className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
-                        <Phone className="h-3 w-3" /> Contact Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Email</label>
-                        <p className="text-sm font-medium truncate">{lead.email || '—'}</p>
-                      </div>
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Phone</label>
-                        <p className="text-sm font-medium">{lead.phone || '—'}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-7 space-y-6">
+            <SectionCard
+              title="Contact"
+              description="How to reach this person"
+              icon={Phone}
+            >
+              <dl>
+                <DetailRow label="Full name" value={`${lead.firstName || ''} ${lead.lastName || ''}`.trim()} icon={User} />
+                <DetailRow label="Email" value={lead.email} icon={Mail} href={lead.email ? `mailto:${lead.email}` : undefined} />
+                <DetailRow label="Phone" value={lead.phone} icon={Phone} href={lead.phone ? `tel:${lead.phone}` : undefined} />
+              </dl>
+            </SectionCard>
 
-                  <Card className="shadow-none border border-slate-200">
-                    <CardHeader className="pb-3 border-b bg-muted/20">
-                      <CardTitle className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
-                        <Briefcase className="h-3 w-3" /> Application info
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Type</label>
-                        <p className="text-sm font-medium capitalize">{lead.applicationType?.toLowerCase() || '—'}</p>
-                      </div>
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Lawsuit</label>
-                        <p className="text-sm font-medium capitalize">{lead.lawsuit?.toLowerCase() || '—'}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+            <SectionCard
+              title="Identity & location"
+              description="Identity details on file"
+              icon={MapPin}
+            >
+              <dl>
+                <DetailRow label="Date of birth" value={formatDisplayDate(lead.dateOfBirth)} icon={Calendar} />
+                <DetailRow label="Address" value={lead.address} icon={MapPin} />
+              </dl>
+            </SectionCard>
 
-                  <Card className="shadow-none border border-slate-200">
-                    <CardHeader className="pb-3 border-b bg-muted/20">
-                      <CardTitle className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
-                        <UserCircle2 className="h-3 w-3" /> Identity
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Address</label>
-                        <p className="text-sm font-medium truncate capitalize">{lead.address?.toLowerCase() || '—'}</p>
-                      </div>
-                      <div>
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground/60 block mb-0.5">Date of Birth</label>
-                        <p className="text-sm font-medium">
-                          {lead.dateOfBirth ? format(new Date(lead.dateOfBirth), 'MM/dd/yyyy') : '—'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+            <SectionCard
+              title="Case information"
+              description="Lawsuit and application context"
+              icon={Briefcase}
+            >
+              <dl>
+                <DetailRow label="Application type" value={lead.applicationType} icon={ClipboardList} />
+                <DetailRow label="Lawsuit" value={lead.lawsuit || lead.applicationType} icon={Briefcase} />
+                <DetailRow label="Buyer code" value={lead.buyerCode} icon={Hash} />
+              </dl>
+            </SectionCard>
 
-                {/* INTERNAL DOCUMENTATION */}
-                <Card className="shadow-none border border-slate-200">
-                  <CardHeader className="pb-3 border-b bg-muted/20">
-                    <CardTitle className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
-                      <FileText className="h-3 w-3" /> Internal Documentation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="p-4 rounded-lg bg-muted/30 border text-sm text-muted-foreground leading-relaxed italic">
-                      {lead.notes || 'No protocol notes available for this record.'}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="fields" className="mt-4">
-                <Card className="shadow-none border border-slate-200 p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {lead.fields?.length > 0 ? lead.fields.map((f: any, i: number) => (
-                      <div key={i} className="p-3 border rounded-lg bg-muted/10">
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">{f.key}</p>
-                        {!/^\d+$/.test(f.value) && !isNaN(new Date(f.value).getTime()) ? (
-                          <div>
-                            <p className="text-xs font-semibold">{format(new Date(f.value), 'MM/dd/yyyy')}</p> 
-                          </div>
-                        ) : (
-                          <p className="text-xs font-semibold capitalize">{f.value?.toString().toLowerCase()}</p>
-                        )}
-                      </div>
-                    ) ) : (
-                      <p className="col-span-full text-center py-12 text-muted-foreground text-xs capitalize font-bold">No metadata found</p>
-                    )}
-                  </div>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <SectionCard
+              title="Notes"
+              description="Internal documentation for this lead"
+              icon={FileText}
+            >
+              <div className="py-4">
+                <p className={cn(
+                  "text-sm leading-relaxed whitespace-pre-wrap break-words",
+                  lead.notes ? "text-foreground" : "text-muted-foreground italic"
+                )}>
+                  {lead.notes || 'No notes have been added for this lead yet.'}
+                </p>
+              </div>
+            </SectionCard>
           </div>
 
-          {/* SIDEBAR TIMELINE */}
-          <div className="lg:col-span-4">
-            <Card className="shadow-none border border-slate-200 h-[650px] flex flex-col">
-              <CardHeader className="border-b bg-muted/20">
-                <CardTitle className="text-xs uppercase font-bold flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" /> Activity History
-                </CardTitle>
-              </CardHeader>
-              <ScrollArea className="flex-1">
-                <div className="p-6 relative">
-                  <div className="absolute left-[31px] top-6 bottom-6 w-0.5 bg-border" />
-                  <div className="space-y-8">
-                    {lead.statusHistory?.slice().reverse().map((log: any, i: number) => (
-                      <div key={i} className="relative pl-10">
-                        <div className="absolute left-0 top-1 h-2 w-2 rounded-full bg-primary ring-4 ring-background z-10" />
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] font-bold px-2 py-0 capitalize">
-                              {log.toStatus.toLowerCase().replace(/_/g, ' ')}
-                            </Badge>
-                            <div className="text-[10px] text-muted-foreground font-medium text-right">
-                              <div>{format(new Date(log.timestamp), 'MM/dd/yyyy')}</div>
-                              <div>{format(new Date(log.timestamp), 'hh:mm a')}</div>
+          <div className="xl:col-span-5 space-y-6">
+            <SectionCard
+              title="Activity history"
+              description="Status changes over time"
+              icon={History}
+            >
+              <div className="py-4">
+                {lead.statusHistory?.length > 0 ? (
+                  <div className="relative space-y-0">
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border" />
+                    <div className="space-y-5">
+                      {[...lead.statusHistory].reverse().map((log: any, i: number) => {
+                        const when = formatDateTime(log.timestamp);
+                        const color = STATUS_CONFIG[log.toStatus]?.color || '#64748b';
+                        return (
+                          <div key={log._id || i} className="relative pl-7">
+                            <div
+                              className="absolute left-0 top-1.5 h-3.5 w-3.5 rounded-full border-2 border-background"
+                              style={{
+                                backgroundColor: color,
+                                boxShadow: `0 0 0 3px ${hexToRgba(color, 0.18)}`,
+                              }}
+                            />
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="font-medium"
+                                  style={{
+                                    color,
+                                    borderColor: hexToRgba(color, 0.35),
+                                    backgroundColor: hexToRgba(color, 0.08),
+                                  }}
+                                >
+                                  {formatStatus(log.toStatus)}
+                                </Badge>
+                                <div className="text-xs text-muted-foreground text-right tabular-nums">
+                                  <div>{when.date}</div>
+                                  <div>{when.time}</div>
+                                </div>
+                              </div>
+                              {log.fromStatus && (
+                                <p className="text-xs text-muted-foreground">
+                                  From <span className="font-medium text-foreground/80">{formatStatus(log.fromStatus)}</span>
+                                </p>
+                              )}
+                              <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">
+                                {log.notes || 'No note recorded for this change.'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                By {log.changedBy?.name || 'System'}
+                                {log.changedBy?.email ? ` · ${log.changedBy.email}` : ''}
+                              </p>
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground font-medium italic">{log.notes || "System update."}</p>
-                          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase">Agent: {log.changedBy?.name || "System"}</p>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </ScrollArea>
-            </Card>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    No status changes recorded yet.
+                  </p>
+                )}
+              </div>
+            </SectionCard>
           </div>
         </div>
+
+        {/* Custom / dynamic fields — full table, no clipping */}
+        <Card className="shadow-none border-border/80 bg-card/90 gap-0 py-0 overflow-hidden">
+          <CardHeader className="px-5 py-4 border-b border-border/70 bg-muted/20">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              Application answers
+            </CardTitle>
+            <CardDescription className="text-xs">
+              All questionnaire and custom field responses for this lead
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {customFields.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent bg-muted/30">
+                    <TableHead className="w-[40%] min-w-[180px] px-5 font-medium text-muted-foreground">
+                      Question / field
+                    </TableHead>
+                    <TableHead className="px-5 font-medium text-muted-foreground">
+                      Response
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customFields.map((field: { key: string; label: string; value: string }, i: number) => (
+                    <TableRow key={`${field.key}-${i}`} className="align-top">
+                      <TableCell className="px-5 py-3.5 text-sm text-muted-foreground whitespace-normal break-words">
+                        {field.label}
+                      </TableCell>
+                      <TableCell className="px-5 py-3.5 text-sm font-medium text-foreground whitespace-pre-wrap break-words">
+                        {field.value}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+                No application answers are on file for this lead.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* UPDATE STATUS DIALOG */}
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent className="max-w-md rounded-xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">Update Lead Status</DialogTitle>
+            <DialogTitle>Update lead status</DialogTitle>
+            <DialogDescription>
+              Change the pipeline stage for {lead.firstName} {lead.lastName}.
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onUpdateStatus)} className="space-y-6 pt-4">
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Select Pipeline Stage</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <form onSubmit={form.handleSubmit(onUpdateStatus)} className="space-y-4 pt-1">
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {LEAD_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {formatStatus(s)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note</FormLabel>
                     <FormControl>
-                      <SelectTrigger className="rounded-lg h-11">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
+                      <Textarea
+                        {...field}
+                        className="min-h-[100px]"
+                        placeholder="Reason for this status change…"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {LEAD_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="text-xs font-bold capitalize">
-                            {s.toLowerCase().replace(/_/g, ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="notes" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Log Note</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} className="rounded-lg min-h-[100px] text-sm" placeholder="Reason for status change..." />
-                  </FormControl>
-                </FormItem>
-              )} />
-              <Button type="submit" className="w-full h-11 font-bold rounded-lg shadow-md">Confirm Update</Button>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setStatusDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save update</Button>
+              </DialogFooter>
             </form>
           </Form>
         </DialogContent>
