@@ -18,7 +18,6 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const userId = decoded.id;
     const userRole = decoded.role;
 
     if (!['admin', 'super_admin'].includes(userRole as string)) {
@@ -35,13 +34,6 @@ export async function GET(
       return NextResponse.json(
         { message: 'Lead not found' },
         { status: 404 }
-      );
-    }
-
-    if (userRole === 'admin' && lead.createdBy && lead.createdBy._id.toString() !== userId) {
-      return NextResponse.json(
-        { message: 'You do not have permission to view this lead' },
-        { status: 403 }
       );
     }
 
@@ -70,28 +62,73 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (decoded.role !== 'super_admin') {
+    if (!['admin', 'super_admin'].includes(decoded.role as string)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
     }
 
     const body = await request.json();
     const { status, notes, buyerCode } = body;
+    const isSuperAdmin = decoded.role === 'super_admin';
 
-    const statusHistory = {
-      fromStatus: (await Lead.findById(leadId).select('status')).status,
-      toStatus: status,
-      notes: notes || "",
-      changedBy: decoded.id
+    // Regular admins may only update buyer codes
+    if (!isSuperAdmin) {
+      if (buyerCode === undefined || buyerCode === null || String(buyerCode).trim() === '') {
+        return NextResponse.json(
+          { message: 'Buyer code is required' },
+          { status: 400 }
+        );
+      }
+      const updated = await Lead.findByIdAndUpdate(
+        leadId,
+        { $set: { buyerCode: String(buyerCode).trim().toUpperCase() } },
+        { new: true, runValidators: true }
+      );
+      if (!updated) {
+        return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
+      }
+      return NextResponse.json({
+        message: 'Buyer code updated successfully',
+        lead: updated,
+      });
+    }
+
+    const nextStatus = status
+      ? (status === 'SEND TO ANOTHER BUYER' ? 'SEND_TO_ANOTHER_BUYER' : status)
+      : undefined;
+
+    const existing = await Lead.findById(leadId).select('status');
+    if (!existing) {
+      return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
+    }
+
+    const updateOps: any = {
+      $set: {} as Record<string, unknown>,
     };
 
-    const updatedLead = await Lead.findByIdAndUpdate(
-      leadId,
-      {
-        $set: { status, buyerCode },
-        $push: { statusHistory },
-      },
-      { new: true }
-    );
+    if (buyerCode !== undefined) {
+      updateOps.$set.buyerCode =
+        typeof buyerCode === 'string' && buyerCode.trim()
+          ? buyerCode.trim().toUpperCase()
+          : buyerCode;
+    }
+
+    if (nextStatus && nextStatus !== existing.status) {
+      updateOps.$set.status = nextStatus;
+      updateOps.$push = {
+        statusHistory: {
+          fromStatus: existing.status,
+          toStatus: nextStatus,
+          notes: notes || '',
+          changedBy: decoded.id,
+          timestamp: new Date(),
+        },
+      };
+    }
+
+    const updatedLead = await Lead.findByIdAndUpdate(leadId, updateOps, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedLead) {
       return NextResponse.json(
@@ -106,6 +143,12 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating lead:', error);
+    if ((error as any)?.name === 'ValidationError') {
+      return NextResponse.json(
+        { message: (error as Error).message || 'Validation failed' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { message: 'Server error', error: (error as Error).message },
       { status: 500 }

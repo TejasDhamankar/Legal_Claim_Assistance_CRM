@@ -140,19 +140,34 @@ export const STATUS_CONFIG: Record<
     color: '#374151',
     description: 'Lead non-conversion state',
   },
+  VM: {
+    icon: <PhoneOff />,
+    color: '#475569',
+    description: 'Left voicemail',
+  },
+  TRANSFERRED: {
+    icon: <ArrowUpRight />,
+    color: '#1d4ed8',
+    description: 'Transferred to another queue',
+  },
+  SEND_TO_ANOTHER_BUYER: {
+    icon: <ArrowUpRight />,
+    color: '#7c3aed',
+    description: 'Sent to another buyer',
+  },
 };
 
 export const STATUS_SEQUENCE = [
   "PAID", "BILLABLE", "SIGNED", "SENT_CLIENT", "SENT_TO_CLIENT", "SENT_TO_LAW_FIRM", "ID_VERIFIED", "VERIFIED", "POSTED",
-  "WORKING", "QC", "CALL_BACK", "WAITING_ID", "PENDING", "REFRESH",
+  "WORKING", "QC", "CALL_BACK", "WAITING_ID", "PENDING", "REFRESH", "TRANSFERRED", "VM", "SEND_TO_ANOTHER_BUYER",
   "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
   "CAMPAIGN_PAUSED", "NOT_RESPONDING", "REJECTED", "REJECTED_BY_CLIENT", "DUPLICATE", "RETURNED", "FELONY", "CHARGEBACK", "DEAD_LEAD"
 ];
 
 export const BUCKETS = {
-  PIPELINE: ["WORKING", "QC", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4", "CALL_BACK", "PENDING", "WAITING_ID", "REFRESH"],
+  PIPELINE: ["WORKING", "QC", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4", "CALL_BACK", "PENDING", "WAITING_ID", "REFRESH", "VM", "TRANSFERRED"],
   CONVERSION: ["VERIFIED", "ID_VERIFIED", "SIGNED", "SENT_CLIENT", "SENT_TO_CLIENT", "PAID", "BILLABLE", "SENT_TO_LAW_FIRM", "POSTED"],
-  RISK: ["REJECTED", "REJECTED_BY_CLIENT", "DUPLICATE", "RETURNED", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "CHARGEBACK"]
+  RISK: ["REJECTED", "REJECTED_BY_CLIENT", "DUPLICATE", "RETURNED", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "CHARGEBACK", "SEND_TO_ANOTHER_BUYER"]
 };
 
 export { lawsuitColor } from '@/lib/lawsuit-color';

@@ -79,7 +79,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
 const LEAD_STATUSES = [
-  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID", "SIGNED","VM","TRANSFERRED","SEND TO ANOTHER BUYER",
+  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID", "SIGNED","VM","TRANSFERRED","SEND_TO_ANOTHER_BUYER",
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING", 
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4", 
   "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", 
@@ -147,22 +147,22 @@ export default function LeadManagement() {
   }, [authLoading, authChecked, user, isAdmin, router]);
 
   useEffect(() => {
-    if (authLoading || !authChecked || !isSuperAdmin) return;
+    if (authLoading || !authChecked || !isAdmin) return;
     const load = async () => {
       try {
-        const [usersRes, codesRes] = await Promise.all([
-          axios.get('/api/admin/users'),
-          axios.get('/api/admin/leads/buyer-codes'),
-        ]);
-        setUsers(usersRes.data?.users || []);
+        const codesRes = await axios.get('/api/admin/buyer-codes');
         setBuyerCodes(codesRes.data?.buyerCodes || []);
+        if (isSuperAdmin) {
+          const usersRes = await axios.get('/api/admin/users');
+          setUsers(usersRes.data?.users || []);
+        }
       } catch (error: any) {
         const msg = error?.response?.data?.message || error?.message || 'Failed to load filter data';
         toast({ title: 'Error', description: msg, variant: 'destructive' });
       }
     };
     load();
-  }, [authLoading, authChecked, isSuperAdmin]);
+  }, [authLoading, authChecked, isAdmin, isSuperAdmin]);
 
   useEffect(() => {
     if (authLoading || !authChecked || !isAdmin) return;
@@ -174,11 +174,7 @@ export default function LeadManagement() {
         if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
         if (buyerCodeFilter && buyerCodeFilter !== 'ALL') params.set('buyerCode', buyerCodeFilter);
         if (entryDate) params.set('entryDate', entryDate);
-        if (isSuperAdmin) {
-          if (createdByFilter && createdByFilter !== 'ALL') params.set('createdBy', createdByFilter);
-        } else if (user?.id) {
-          params.set('createdBy', user.id);
-        }
+        if (createdByFilter && createdByFilter !== 'ALL') params.set('createdBy', createdByFilter);
         const endpoint = params.toString() ? `/api/admin/leads?${params.toString()}` : '/api/admin/leads';
         const { data } = await axios.get(endpoint, { signal: controller.signal });
         setLeads(data.leads);
@@ -200,20 +196,39 @@ export default function LeadManagement() {
     };
     load();
     return () => controller.abort();
-  }, [statusFilter, createdByFilter, buyerCodeFilter, entryDate, reloadKey, authLoading, authChecked, isAdmin, isSuperAdmin, user?.id]);
+  }, [statusFilter, createdByFilter, buyerCodeFilter, entryDate, reloadKey, authLoading, authChecked, isAdmin]);
 
   const onUpdateLead = async (values: UpdateLeadFormValues) => {
     if (!selectedLead) return;
     setSubmitting(true);
     try {
-      await axios.put(`/api/admin/leads/${selectedLead._id}`, values);
-      toast({ title: "Success", description: "Lead status updated" });
+      if (isSuperAdmin) {
+        await axios.put(`/api/admin/leads/${selectedLead._id}`, values);
+        toast({ title: 'Success', description: 'Lead updated' });
+      } else {
+        const code = (values.buyerCode || '').trim().toUpperCase();
+        if (!code) {
+          toast({ title: 'Error', description: 'Buyer code is required', variant: 'destructive' });
+          setSubmitting(false);
+          return;
+        }
+        await axios.put(`/api/admin/leads/${selectedLead._id}/buyer-code`, { buyerCode: code });
+        if (code && !buyerCodes.includes(code)) {
+          try {
+            await axios.post('/api/admin/buyer-codes', { code });
+            setBuyerCodes((prev) => [...prev, code].sort((a, b) => a.localeCompare(b)));
+          } catch {
+            /* catalog add is best-effort */
+          }
+        }
+        toast({ title: 'Success', description: 'Buyer code updated' });
+      }
       setUpdateDialogOpen(false);
-      setSubmitting(false);
       setReloadKey((k) => k + 1);
     } catch (error: any) {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Update failed', variant: 'destructive' });
+    } finally {
       setSubmitting(false);
-      toast({ title: "Error", description: error.response?.data?.message || "Update failed", variant: "destructive" });
     }
   };
 
@@ -329,33 +344,31 @@ export default function LeadManagement() {
                   />
                 </div>
                 {isSuperAdmin && (
-                  <>
-                    <Select value={createdByFilter} onValueChange={setCreatedByFilter}>
-                      <SelectTrigger className="w-[180px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
-                        <SelectValue placeholder="Created By" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
-                        <SelectItem value="ALL">All Agents</SelectItem>
-                        {users.map((u) => {
-                          const id = u._id || u.id || '';
-                          if (!id) return null;
-                          return <SelectItem key={id} value={id}>{u.name}</SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <Select value={buyerCodeFilter} onValueChange={setBuyerCodeFilter}>
-                      <SelectTrigger className="w-[170px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
-                        <SelectValue placeholder="Buyer Code" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
-                        <SelectItem value="ALL">All Buyer Codes</SelectItem>
-                        {buyerCodes.map((code) => (
-                          <SelectItem key={code} value={code}>{code}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
+                  <Select value={createdByFilter} onValueChange={setCreatedByFilter}>
+                    <SelectTrigger className="w-[180px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                      <SelectValue placeholder="Created By" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                      <SelectItem value="ALL">All Agents</SelectItem>
+                      {users.map((u) => {
+                        const id = u._id || u.id || '';
+                        if (!id) return null;
+                        return <SelectItem key={id} value={id}>{u.name}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
                 )}
+                <Select value={buyerCodeFilter} onValueChange={setBuyerCodeFilter}>
+                  <SelectTrigger className="w-[170px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                    <SelectValue placeholder="Buyer Code" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
+                    <SelectItem value="ALL">All Buyer Codes</SelectItem>
+                    {buyerCodes.map((code) => (
+                      <SelectItem key={code} value={code}>{code}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[160px] bg-white dark:bg-[#111111] border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
                     <SelectValue placeholder="Status" />
@@ -438,16 +451,14 @@ export default function LeadManagement() {
                           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><MoreHorizontal className="h-5 w-5" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
-                          {user?.role === 'super_admin' && (
-                            <DropdownMenuItem onClick={() => handleUpdateLeadClick(lead)} className="cursor-pointer dark:focus:bg-zinc-800">
-                              <FileEdit className="mr-2 h-4 w-4" /> Update Status
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem onClick={() => handleUpdateLeadClick(lead)} className="cursor-pointer dark:focus:bg-zinc-800">
+                            <FileEdit className="mr-2 h-4 w-4" /> {isSuperAdmin ? 'Update Status' : 'Set Buyer Code'}
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/admin/leads/${lead._id}`)} className="cursor-pointer dark:focus:bg-zinc-800">
                             <Eye className="mr-2 h-4 w-4" /> View Details
                           </DropdownMenuItem>
-                          {user?.role === 'super_admin' && <DropdownMenuSeparator className="dark:bg-zinc-800" />}
-                          {user?.role === 'super_admin' && (
+                          {isSuperAdmin && <DropdownMenuSeparator className="dark:bg-zinc-800" />}
+                          {isSuperAdmin && (
                             <DropdownMenuItem 
                               onClick={() => onDeleteLead(lead._id)} 
                               className="cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-500/10 dark:focus:text-rose-400"
@@ -471,50 +482,76 @@ export default function LeadManagement() {
           </CardFooter>
         </Card>
 
-        {/* Update Status Dialog */}
+        {/* Update Status / Buyer Code Dialog */}
         <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
           <DialogContent className="sm:max-w-[425px] dark:bg-[#0a0a0a] dark:border-zinc-800">
             <DialogHeader>
-              <DialogTitle className="text-xl dark:text-white">Update Lead Status</DialogTitle>
-              <DialogDescription className="dark:text-zinc-500">Apply status and buyer code changes to the selected lead.</DialogDescription>
+              <DialogTitle className="text-xl dark:text-white">
+                {isSuperAdmin ? 'Update Lead Status' : 'Set Buyer Code'}
+              </DialogTitle>
+              <DialogDescription className="dark:text-zinc-500">
+                {isSuperAdmin
+                  ? 'Apply status and buyer code changes to the selected lead.'
+                  : 'Assign a buyer code (e.g. C1, C2) to this lead. Only admins can change buyer codes.'}
+              </DialogDescription>
             </DialogHeader>
             <Form {...updateForm}>
               <form onSubmit={updateForm.handleSubmit(onUpdateLead)} className="space-y-5">
-                <FormField control={updateForm.control} name="status" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 dark:text-zinc-300 font-semibold">Classification</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
-                        {LEAD_STATUSES.map(s => <SelectItem key={s} value={s} className="dark:focus:bg-zinc-800">{s.replace(/_/g, ' ')}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
-                <FormField control={updateForm.control} name="notes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 dark:text-zinc-300 font-semibold">Change Reason / Notes</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Why is this status being changed?" 
-                        className="resize-none border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white placeholder:text-zinc-600" 
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )} />
+                {isSuperAdmin && (
+                  <>
+                    <FormField control={updateForm.control} name="status" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-700 dark:text-zinc-300 font-semibold">Classification</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-60 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
+                            {LEAD_STATUSES.map(s => <SelectItem key={s} value={s} className="dark:focus:bg-zinc-800">{s.replace(/_/g, ' ')}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )} />
+                    <FormField control={updateForm.control} name="notes" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-slate-700 dark:text-zinc-300 font-semibold">Change Reason / Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Why is this status being changed?" 
+                            className="resize-none border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white placeholder:text-zinc-600" 
+                            {...field} 
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )} />
+                  </>
+                )}
                 <FormField control={updateForm.control} name="buyerCode" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-slate-700 dark:text-zinc-300 font-semibold">Buyer Code</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
+                          <SelectValue placeholder="Select C1, C2…" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="dark:bg-[#111111] dark:border-zinc-800 dark:text-white">
+                        {buyerCodes.map((code) => (
+                          <SelectItem key={code} value={code} className="dark:focus:bg-zinc-800">{code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormControl>
-                      <Input 
-                        placeholder="Assign buyer code..." 
-                        className="border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white placeholder:text-zinc-600" 
-                        {...field} 
+                      <Input
+                        placeholder="Or type a new code (e.g. C6)"
+                        className="mt-2 border-slate-200 dark:bg-[#111111] dark:border-zinc-800 dark:text-white placeholder:text-zinc-600 uppercase"
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
                     </FormControl>
                   </FormItem>
@@ -522,7 +559,7 @@ export default function LeadManagement() {
                 <DialogFooter>
                   <Button type="submit" disabled={submitting} className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-white dark:text-black dark:hover:bg-zinc-200 transition-all font-semibold">
                     {submitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <FileEdit className="h-4 w-4 mr-2" />}
-                    Confirm Status Update
+                    {isSuperAdmin ? 'Confirm Status Update' : 'Save Buyer Code'}
                   </Button>
                 </DialogFooter>
               </form>

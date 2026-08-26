@@ -31,34 +31,38 @@ const leadSchema = new mongoose.Schema({
   fields: [dynamicFieldSchema], // Array of dynamic fields
   status: {
     type: String,
-   enum: [
-  "PENDING",
-  "REJECTED",
-  "VERIFIED",
-  "REJECTED_BY_CLIENT",
-  "PAID",
-  "DUPLICATE",
-  "NOT_RESPONDING",
-  "FELONY",
-  "DEAD_LEAD",
-  "WORKING",
-  "CALL_BACK",
-  "ATTEMPT_1",
-  "ATTEMPT_2",
-  "ATTEMPT_3",
-  "ATTEMPT_4",
-  "CHARGEBACK",
-  "WAITING_ID",
-  "SENT_TO_CLIENT",
-  "QC",
-  "ID_VERIFIED",
-  "BILLABLE",
-  "CAMPAIGN_PAUSED",
-  "SENT_TO_LAW_FIRM",
-  "RETURNED",
-  "REFRESH"
-],
-
+    enum: [
+      "PENDING",
+      "REJECTED",
+      "VERIFIED",
+      "REJECTED_BY_CLIENT",
+      "PAID",
+      "DUPLICATE",
+      "NOT_RESPONDING",
+      "FELONY",
+      "DEAD_LEAD",
+      "WORKING",
+      "CALL_BACK",
+      "ATTEMPT_1",
+      "ATTEMPT_2",
+      "ATTEMPT_3",
+      "ATTEMPT_4",
+      "CHARGEBACK",
+      "WAITING_ID",
+      "SENT_TO_CLIENT",
+      "QC",
+      "ID_VERIFIED",
+      "BILLABLE",
+      "CAMPAIGN_PAUSED",
+      "SENT_TO_LAW_FIRM",
+      "RETURNED",
+      "REFRESH",
+      "POSTED",
+      "SIGNED",
+      "VM",
+      "TRANSFERRED",
+      "SEND_TO_ANOTHER_BUYER",
+    ],
     default: "PENDING",
   },
   statusHistory: [statusHistorySchema],
@@ -78,4 +82,9 @@ leadSchema.index({ organizationId: 1, phoneNormalized: 1 }, {
   partialFilterExpression: { phoneNormalized: { $exists: true, $ne: "" } }
 });
 
-export default mongoose.models.Lead || mongoose.model("Lead", leadSchema);
+// Ensure schema updates (new enum values) apply under Next.js HMR
+if (mongoose.models.Lead) {
+  delete (mongoose.models as any).Lead;
+}
+
+export default mongoose.model("Lead", leadSchema);

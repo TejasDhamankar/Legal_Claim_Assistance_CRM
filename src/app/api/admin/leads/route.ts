@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     if (!decoded || typeof decoded !== 'object') {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    const userId = decoded.id;
     const userRole = decoded.role;
 
     if (!['admin', 'super_admin'].includes(userRole as string)) {
@@ -64,9 +63,8 @@ export async function GET(request: NextRequest) {
         query.createdAt = { $gte: start, $lte: end };
       }
     }
-    if (userRole === 'admin') {
-      query.createdBy = userId;
-    } else if (createdBy) {
+    // Admins and super_admins see all leads (admins manage buyer codes across the pipeline)
+    if (createdBy) {
       query.createdBy = createdBy;
     }
 

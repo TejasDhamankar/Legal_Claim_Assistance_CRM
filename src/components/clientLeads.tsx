@@ -86,13 +86,13 @@ export default function ClientLeads() {
   }, [user, authChecked, authLoading, pagination.page, statusFilter, searchInput, entryDate]);
 
   const LEAD_STATUSES = [
-    "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT", "PAID", "POSTED", "SIGNED", "VM", "TRANSFERRED", "SEND TO ANOTHER BUYER",
+    "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT", "PAID", "POSTED", "SIGNED", "VM", "TRANSFERRED", "SEND_TO_ANOTHER_BUYER",
     "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
     "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
     "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED", "REFRESH"
   ];
 
-  const colSpan = 9;
+  const colSpan = 10;
 
   return (
     <DashboardLayout>
@@ -184,6 +184,7 @@ export default function ClientLeads() {
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Date of birth</TableHead>
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Email</TableHead>
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Lawsuit</TableHead>
+                  <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Buyer code</TableHead>
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Created by</TableHead>
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
                   <TableHead className="h-9 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground text-right w-[88px]"> </TableHead>
@@ -237,6 +238,9 @@ export default function ClientLeads() {
                             </span>
                           );
                         })()}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-[13px] font-medium tabular-nums whitespace-nowrap">
+                        {lead.buyerCode || '—'}
                       </TableCell>
                       <TableCell className="px-3 py-2 text-[13px] text-muted-foreground whitespace-nowrap">
                         {lead.createdBy?.name || 'System'}

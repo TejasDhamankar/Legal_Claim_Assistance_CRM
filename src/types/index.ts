@@ -36,7 +36,13 @@ export type LeadStatus =
   | 'CAMPAIGN_PAUSED'
   | 'SENT_TO_LAW_FIRM'
   | 'RETURNED'
-  | 'REFRESH';
+  | 'REFRESH'
+  | 'POSTED'
+  | 'SIGNED'
+  | 'VM'
+  | 'TRANSFERRED'
+  | 'SEND_TO_ANOTHER_BUYER'
+  | 'BILLABLE';
 
 export interface StatusHistoryItem {
   _id?: string | ObjectId;

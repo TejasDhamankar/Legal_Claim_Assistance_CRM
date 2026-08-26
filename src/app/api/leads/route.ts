@@ -38,9 +38,41 @@ const buildLeadInfo = (lead: any) => ({
   id: lead._id,
   name: `${lead.firstName} ${lead.lastName}`,
   status: lead.status,
+  organizationId: lead.organizationId || null,
   createdBy: lead.createdBy ? lead.createdBy.name : 'Unknown',
   createdAt: lead.createdAt
 });
+
+/** Global email match — duplicates across orgs still get DUPLICATE status */
+const findLeadByEmail = async (normalizedEmail: string) => {
+  if (!normalizedEmail) return null;
+  return Lead.findOne({
+    $or: [
+      { emailNormalized: normalizedEmail },
+      { email: { $regex: new RegExp(`^${escapeRegex(normalizedEmail)}$`, 'i') } },
+    ],
+  }).populate('createdBy', 'name email');
+};
+
+/** Global phone match */
+const findLeadByPhone = async (normalizedPhone: string) => {
+  if (!normalizedPhone) return null;
+  return Lead.findOne({
+    $or: [
+      { phoneNormalized: normalizedPhone },
+      {
+        phone: {
+          $regex: new RegExp(`^\\D*${normalizedPhone.split('').join('\\D*')}\\D*$`),
+        },
+      },
+    ],
+  }).populate('createdBy', 'name email');
+};
+
+const sameOrganization = (lead: any, user: any) => {
+  if (!lead?.organizationId || !user?.organizationId) return false;
+  return String(lead.organizationId) === String(user.organizationId);
+};
 
 const parseDateOnly = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -180,7 +212,7 @@ export async function POST(request: NextRequest) {
     const missingFields = [];
 
     for (const field of requiredFields) {
-      if (!fields[field.key]?.toString().trim()) {
+      if (!fields?.[field.key]?.toString().trim()) {
         missingFields.push(field.label);
       }
     }
@@ -191,46 +223,34 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check for duplicate email or phone
+    // Check for duplicate email or phone (global — so status becomes DUPLICATE)
     let isDuplicate = false;
     let duplicateReason = '';
     let existingLeadInfo = null;
+    let existingLeadDoc: any = null;
 
-    // Build duplicate query with proper scope
-    let duplicateQuery: any = buildDuplicateScope(decoded, user);
-
-    // Only check if email or phone is provided
     if (normalizedEmail) {
-      duplicateQuery = { ...duplicateQuery, emailNormalized: normalizedEmail };
-
-      const duplicateEmail = await Lead.findOne(duplicateQuery)
-        .populate('createdBy', 'name email');
-
+      const duplicateEmail = await findLeadByEmail(normalizedEmail);
       if (duplicateEmail) {
         isDuplicate = true;
         duplicateReason = 'email';
+        existingLeadDoc = duplicateEmail;
         existingLeadInfo = buildLeadInfo(duplicateEmail);
       }
     }
 
-    // Reset duplicate query except for scope filter
-    duplicateQuery = buildDuplicateScope(decoded, user);
-
-    // If not duplicate by email, check phone
     if (!isDuplicate && normalizedPhone) {
-      duplicateQuery = { ...duplicateQuery, phoneNormalized: normalizedPhone };
-
-      const duplicatePhone = await Lead.findOne(duplicateQuery)
-        .populate('createdBy', 'name email');
-
+      const duplicatePhone = await findLeadByPhone(normalizedPhone);
       if (duplicatePhone) {
         isDuplicate = true;
         duplicateReason = 'phone number';
+        existingLeadDoc = duplicatePhone;
         existingLeadInfo = buildLeadInfo(duplicatePhone);
       }
     }
 
-    duplicateQuery = buildDuplicateScope(decoded, user);
+    // Org-scoped checks for case-specific / name+address duplicates
+    let duplicateQuery: any = buildDuplicateScope(decoded, user);
 
     if (!isDuplicate && applicationType === 'Rideshare') {
       const incidentPersonName = normalizeText(getFieldValue(fields, 'Incident Reported Person Name'));
@@ -263,6 +283,7 @@ export async function POST(request: NextRequest) {
         if (duplicateIncidentPerson) {
           isDuplicate = true;
           duplicateReason = 'rideshare incident reported person details';
+          existingLeadDoc = duplicateIncidentPerson;
           existingLeadInfo = buildLeadInfo(duplicateIncidentPerson);
         }
       }
@@ -270,7 +291,6 @@ export async function POST(request: NextRequest) {
 
     duplicateQuery = buildDuplicateScope(decoded, user);
 
-    // Fallback check: same normalized name and address
     if (!isDuplicate && normalizedFirstName && normalizedLastName && normalizedAddress) {
       const duplicateNameAddress = await Lead.findOne({
         ...duplicateQuery,
@@ -282,6 +302,7 @@ export async function POST(request: NextRequest) {
       if (duplicateNameAddress) {
         isDuplicate = true;
         duplicateReason = 'name + address';
+        existingLeadDoc = duplicateNameAddress;
         existingLeadInfo = buildLeadInfo(duplicateNameAddress);
       }
     }
@@ -297,22 +318,23 @@ export async function POST(request: NextRequest) {
 
     // Transform dynamic fields from object to array format
     const fieldsArray = [];
-    if (body.fields && typeof body.fields === 'object') {
+    if (body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields)) {
       for (const [key, value] of Object.entries(body.fields)) {
-        if (value) { // Only add non-empty values
+        if (value) {
           fieldsArray.push({ key, value });
         }
       }
     }
 
-    // Create the lead with proper fields format and assign organization
-    const lead = await Lead.create({
+    // Avoid unique index collisions within the same org when marking duplicates
+    const collideInOrg = isDuplicate && sameOrganization(existingLeadDoc, user);
+    const leadPayload = {
       firstName: body.firstName,
       lastName: body.lastName,
       email: body.email,
-      emailNormalized: isDuplicate ? undefined : (normalizedEmail || undefined),
+      emailNormalized: collideInOrg ? undefined : (normalizedEmail || undefined),
       phone: body.phone,
-      phoneNormalized: isDuplicate ? undefined : (normalizedPhone || undefined),
+      phoneNormalized: collideInOrg ? undefined : (normalizedPhone || undefined),
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       applicationType: body.applicationType,
@@ -323,7 +345,6 @@ export async function POST(request: NextRequest) {
       status: status,
       fields: fieldsArray,
       createdBy: decoded.id,
-      // Assign the user's organization ID to the lead
       organizationId: user?.organizationId || null,
       statusHistory: [
         {
@@ -336,7 +357,37 @@ export async function POST(request: NextRequest) {
           timestamp: new Date()
         }
       ]
-    });
+    };
+
+    let lead;
+    try {
+      lead = await Lead.create(leadPayload);
+    } catch (createError: any) {
+      // Race / missed detection: unique index hit → still save as DUPLICATE
+      if (createError?.code === 11000) {
+        isDuplicate = true;
+        if (!duplicateReason) duplicateReason = 'email or phone';
+        notes = `${body.notes || ''}\n\n[SYSTEM] This lead has been marked as a duplicate because the ${duplicateReason} matches an existing lead.`;
+        lead = await Lead.create({
+          ...leadPayload,
+          emailNormalized: undefined,
+          phoneNormalized: undefined,
+          status: 'DUPLICATE',
+          notes,
+          statusHistory: [
+            {
+              fromStatus: '',
+              toStatus: 'DUPLICATE',
+              notes: `Lead created and automatically marked as DUPLICATE (matching ${duplicateReason})`,
+              changedBy: decoded.id,
+              timestamp: new Date()
+            }
+          ]
+        });
+      } else {
+        throw createError;
+      }
+    }
 
     return NextResponse.json({
       message: isDuplicate

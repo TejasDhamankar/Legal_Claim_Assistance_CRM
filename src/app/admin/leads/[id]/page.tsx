@@ -37,6 +37,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -83,7 +84,7 @@ import { DYNAMIC_FIELDS } from '@/lib/dynamic-fields';
 
 // Define Lead status options from your model
 const LEAD_STATUSES = [
-  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID","SIGNED","VM","TRANSFERRED","SEND TO ANOTHER BUYER",
+  "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT","POSTED", "PAID","SIGNED","VM","TRANSFERRED","SEND_TO_ANOTHER_BUYER",
   "DUPLICATE", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
   "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
   "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED", "REFRESH"
@@ -138,11 +139,13 @@ export default function LeadDetailsPage() {
   const router = useRouter();
   const { user, loading: authLoading, authChecked } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [buyerCodes, setBuyerCodes] = useState<string[]>([]);
 
   const updateForm = useForm<UpdateLeadFormValues>({
     resolver: zodResolver(updateLeadSchema),
@@ -159,6 +162,13 @@ export default function LeadDetailsPage() {
       fetchLeadDetails(params.id as string);
     }
   }, [params.id, authLoading, authChecked, isAdmin]);
+
+  useEffect(() => {
+    if (authLoading || !authChecked || !isAdmin) return;
+    axios.get('/api/admin/buyer-codes')
+      .then((res) => setBuyerCodes(res.data?.buyerCodes || []))
+      .catch(() => {});
+  }, [authLoading, authChecked, isAdmin]);
 
   useEffect(() => {
     if (!authLoading && authChecked && user && !isAdmin) {
@@ -191,11 +201,39 @@ export default function LeadDetailsPage() {
 
     setSubmitting(true);
     try {
-      await axios.put(`/api/admin/leads/${lead._id}`, values);
-      toast({
-        title: "Success",
-        description: "Lead status updated successfully",
-      });
+      if (isSuperAdmin) {
+        const payload = {
+          ...values,
+          buyerCode: values.buyerCode?.trim()
+            ? values.buyerCode.trim().toUpperCase()
+            : values.buyerCode,
+        };
+        await axios.put(`/api/admin/leads/${lead._id}`, payload);
+        toast({
+          title: "Success",
+          description: "Lead status updated successfully",
+        });
+      } else {
+        const code = (values.buyerCode || '').trim().toUpperCase();
+        if (!code) {
+          toast({ title: 'Error', description: 'Buyer code is required', variant: 'destructive' });
+          setSubmitting(false);
+          return;
+        }
+        await axios.put(`/api/admin/leads/${lead._id}/buyer-code`, { buyerCode: code });
+        if (!buyerCodes.includes(code)) {
+          try {
+            await axios.post('/api/admin/buyer-codes', { code });
+            setBuyerCodes((prev) => [...prev, code].sort((a, b) => a.localeCompare(b)));
+          } catch {
+            /* best-effort catalog add */
+          }
+        }
+        toast({
+          title: "Success",
+          description: "Buyer code updated successfully",
+        });
+      }
       fetchLeadDetails(lead._id);
       setUpdateDialogOpen(false);
     } catch (error: any) {
@@ -370,10 +408,10 @@ export default function LeadDetailsPage() {
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to Leads
             </Button>
-            {user?.role === 'super_admin' && (
+            {isAdmin && (
               <Button onClick={() => setUpdateDialogOpen(true)}>
                 <FileEdit className="mr-2 h-4 w-4" />
-                Update Status
+                {isSuperAdmin ? 'Update Status' : 'Set Buyer Code'}
               </Button>
             )}
           </div>
@@ -478,7 +516,9 @@ export default function LeadDetailsPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-3">
                     <span className="text-sm text-muted-foreground">Buyer code</span>
-                    <span className="text-sm font-medium break-words">{lead.buyerCode || '—'}</span>
+                    <span className="text-sm font-medium font-mono break-words">
+                      {lead.buyerCode || '—'}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -622,83 +662,108 @@ export default function LeadDetailsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Update Lead Status Dialog */}
+        {/* Update Lead Status / Buyer Code Dialog */}
         <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Update Lead Status</DialogTitle>
+              <DialogTitle>{isSuperAdmin ? 'Update Lead Status' : 'Set Buyer Code'}</DialogTitle>
               <DialogDescription>
-                Change the status for {lead.firstName} {lead.lastName}
+                {isSuperAdmin
+                  ? `Change the status for ${lead.firstName} ${lead.lastName}`
+                  : `Assign a buyer code (e.g. C1, C2) to ${lead.firstName} ${lead.lastName}`}
               </DialogDescription>
             </DialogHeader>
 
             <div className="py-2">
               <div className="font-medium">{lead.firstName} {lead.lastName}</div>
               <div className="text-sm text-muted-foreground">{lead.email}</div>
-              <div className="mt-2">
-                <Badge variant="secondary" className={getStatusColor(lead.status)}>
-                  Current: {lead.status.replace(/_/g, ' ')}
-                </Badge>
-              </div>
+              {isSuperAdmin && (
+                <div className="mt-2">
+                  <Badge variant="secondary" className={getStatusColor(lead.status)}>
+                    Current: {lead.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+              )}
             </div>
 
             <Form {...updateForm}>
               <form onSubmit={updateForm.handleSubmit(handleUpdateStatus)} className="space-y-4">
-                <FormField
-                  control={updateForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Status*</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {LEAD_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status.replace(/_/g, ' ')}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isSuperAdmin && (
+                  <>
+                    <FormField
+                      control={updateForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Status*</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LEAD_STATUSES.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status.replace(/_/g, ' ')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={updateForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add notes about this status change (optional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={updateForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Add notes about this status change (optional)"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
 
                 <FormField
                   control={updateForm.control}
                   name="buyerCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Buyer Code</FormLabel>
+                      <FormLabel>Buyer Code{!isSuperAdmin ? '*' : ''}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select C1, C2…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {buyerCodes.map((code) => (
+                            <SelectItem key={code} value={code}>{code}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormControl>
-                        <Textarea
-                          placeholder="Add buyer code (optional)"
-                          {...field}
+                        <Input
+                          placeholder="Or type a new code (e.g. C6)"
+                          className="mt-2 uppercase"
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                         />
                       </FormControl>
                       <FormMessage />
@@ -716,7 +781,7 @@ export default function LeadDetailsPage() {
                     ) : (
                       <>
                         <FileEdit className="mr-2 h-4 w-4" />
-                        Update Status
+                        {isSuperAdmin ? 'Update Status' : 'Save Buyer Code'}
                       </>
                     )}
                   </Button>
