@@ -19,6 +19,8 @@ export type LeadStatus =
   | 'REJECTED_BY_CLIENT'
   | 'PAID'
   | 'DUPLICATE'
+  | 'DUPLICATE_WITH_CLIENT'
+  | 'DUPLICATE_WITH_LAW_FIRM'
   | 'NOT_RESPONDING'
   | 'FELONY'
   | 'DEAD_LEAD'
