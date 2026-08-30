@@ -41,6 +41,7 @@ export type LeadStatus =
   | 'SIGNED'
   | 'VM'
   | 'TRANSFERRED'
+  | 'READY_TO_TRANSFER'
   | 'SEND_TO_ANOTHER_BUYER'
   | 'BILLABLE';
 
