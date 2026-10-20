@@ -80,20 +80,9 @@ export async function PUT(
     const lead = await Lead.findById(leadId);
     if (!lead) return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
 
-    const isStatusOnlyUpdate =
-      body.status !== undefined &&
-      !body.fields &&
-      !body.firstName &&
-      !body.lastName &&
-      !body.email &&
-      !body.phone &&
-      !body.applicationType &&
-      !body.lawsuit &&
-      !body.address &&
-      body.dateOfBirth === undefined;
-
-    // Status-only updates should not require case questionnaire fields
-    if (!isStatusOnlyUpdate) {
+    // Questionnaire checks only apply when case fields are being rewritten
+    const touchesCaseFields = Boolean(body.fields) || Boolean(body.applicationType);
+    if (touchesCaseFields) {
       const applicationType = body.applicationType || lead.applicationType;
       const incomingFields =
         body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields)
@@ -171,6 +160,16 @@ export async function PUT(
       }
     });
 
+    if (typeof body.email === 'string' && body.email.trim()) {
+      lead.emailNormalized = body.email.trim().toLowerCase();
+    }
+    if (typeof body.phone === 'string' && body.phone.trim()) {
+      lead.phoneNormalized = body.phone.replace(/\D/g, '');
+    }
+    if (typeof body.buyerCode === 'string') {
+      lead.buyerCode = body.buyerCode.trim().toUpperCase();
+    }
+
     await lead.save();
 
     const populated = await Lead.findById(lead._id)
@@ -184,6 +183,12 @@ export async function PUT(
       return NextResponse.json(
         { message: error.message || 'Validation failed' },
         { status: 400 }
+      );
+    }
+    if (error?.code === 11000) {
+      return NextResponse.json(
+        { message: 'Another lead already uses this email or phone.' },
+        { status: 409 }
       );
     }
     return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });

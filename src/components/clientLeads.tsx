@@ -8,7 +8,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,9 +17,10 @@ import { DateInput } from '@/components/ui/DateInput';
 import { Separator } from '@/components/ui/separator';
 import {
   Loader2, Search, History, ChevronRight, ChevronLeft,
-  UserPlus, ExternalLink, Filter, X,
+  UserPlus, ExternalLink, Filter, X, Pencil,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
 import { STATUS_CONFIG } from '@/app/dashboard/status-registry';
 
 function hexToRgba(hex: string, alpha: number) {
@@ -30,6 +31,13 @@ function hexToRgba(hex: string, alpha: number) {
   const g = (n >> 8) & 255
   const b = n & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function toIsoDate(value?: string | Date | null) {
+  if (!value) return '';
+  const str = typeof value === 'string' ? value : value.toISOString();
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(str);
+  return match ? match[1] : '';
 }
 
 function formatDob(value?: string | Date | null) {
@@ -60,6 +68,20 @@ export default function ClientLeads() {
   const [entryDate, setEntryDate] = useState(searchParams.get('entryDate') || '');
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 0 });
   const [historyDialog, setHistoryDialog] = useState<{ open: boolean; lead: any | null }>({ open: false, lead: null });
+  const [buyerCodes, setBuyerCodes] = useState<string[]>([]);
+  const [editLead, setEditLead] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    dateOfBirth: '',
+    email: '',
+    lawsuit: '',
+    status: 'PENDING',
+    buyerCode: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -85,11 +107,69 @@ export default function ClientLeads() {
     if (authChecked && !authLoading && user) fetchLeads();
   }, [user, authChecked, authLoading, pagination.page, statusFilter, searchInput, entryDate]);
 
+  useEffect(() => {
+    if (!authChecked || authLoading || !isSuperAdmin) return;
+    axios.get('/api/admin/buyer-codes')
+      .then((res) => setBuyerCodes(res.data?.buyerCodes || []))
+      .catch(() => {});
+  }, [authChecked, authLoading, isSuperAdmin]);
+
+  const openEdit = (lead: any) => {
+    setEditLead(lead);
+    setEditForm({
+      firstName: lead.firstName || '',
+      lastName: lead.lastName || '',
+      phone: lead.phone || '',
+      dateOfBirth: toIsoDate(lead.dateOfBirth),
+      email: lead.email || '',
+      lawsuit: lead.lawsuit || '',
+      status: lead.status || 'PENDING',
+      buyerCode: lead.buyerCode || '',
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editLead) return;
+    const buyerCode = editForm.buyerCode.trim().toUpperCase();
+    setSavingEdit(true);
+    try {
+      await axios.put(`/api/leads/${editLead._id}`, {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        phone: editForm.phone.trim(),
+        email: editForm.email.trim(),
+        dateOfBirth: editForm.dateOfBirth || undefined,
+        lawsuit: editForm.lawsuit.trim(),
+        status: editForm.status,
+        buyerCode,
+      });
+      if (buyerCode && !buyerCodes.includes(buyerCode)) {
+        try {
+          await axios.post('/api/admin/buyer-codes', { code: buyerCode });
+          setBuyerCodes((prev) => [...prev, buyerCode].sort((a, b) => a.localeCompare(b)));
+        } catch {
+          /* catalog add is best-effort */
+        }
+      }
+      toast({ title: 'Lead updated', description: `${editForm.firstName} ${editForm.lastName}`.trim() });
+      setEditLead(null);
+      await fetchLeads();
+    } catch (error: any) {
+      toast({
+        title: 'Could not update lead',
+        description: error?.response?.data?.message || 'Update failed',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const LEAD_STATUSES = [
     "PENDING", "REJECTED", "VERIFIED", "REJECTED_BY_CLIENT", "PAID", "POSTED", "SIGNED", "VM", "TRANSFERRED", "READY_TO_TRANSFER", "SEND_TO_ANOTHER_BUYER",
     "DUPLICATE", "DUPLICATE_WITH_CLIENT", "DUPLICATE_WITH_LAW_FIRM", "NOT_RESPONDING", "FELONY", "DEAD_LEAD", "WORKING",
     "CALL_BACK", "ATTEMPT_1", "ATTEMPT_2", "ATTEMPT_3", "ATTEMPT_4",
-    "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "RETURNED", "REFRESH"
+    "CHARGEBACK", "WAITING_ID", "SENT_TO_CLIENT", "QC", "ID_VERIFIED", "BILLABLE", "CAMPAIGN_PAUSED", "SENT_TO_LAW_FIRM", "RETURNED", "REFRESH"
   ];
 
   const colSpan = 10;
@@ -260,6 +340,15 @@ export default function ClientLeads() {
                       </TableCell>
                       <TableCell className="px-2 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="inline-flex items-center gap-0.5">
+                          {isSuperAdmin && (
+                            <button
+                              title="Edit lead"
+                              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                              onClick={() => openEdit(lead)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           <button
                             title="History"
                             className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
@@ -315,6 +404,87 @@ export default function ClientLeads() {
           </CardFooter>
         </Card>
       </div>
+
+      <Dialog open={!!editLead} onOpenChange={(open) => !open && !savingEdit && setEditLead(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit lead</DialogTitle>
+            <DialogDescription>
+              Update this lead and assign a buyer code. Only super admins can change these fields.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">First name</span>
+              <Input value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Last name</span>
+              <Input value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Phone</span>
+              <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Date of birth</span>
+              <DateInput value={editForm.dateOfBirth} onChange={(value) => setEditForm((f) => ({ ...f, dateOfBirth: value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm sm:col-span-2">
+              <span className="text-muted-foreground">Email</span>
+              <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm sm:col-span-2">
+              <span className="text-muted-foreground">Lawsuit</span>
+              <Input value={editForm.lawsuit} onChange={(e) => setEditForm((f) => ({ ...f, lawsuit: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Status</span>
+              <Select value={editForm.status} onValueChange={(status) => setEditForm((f) => ({ ...f, status }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {LEAD_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>{status.replace(/_/g, ' ')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Buyer code</span>
+              <Select
+                value={editForm.buyerCode || undefined}
+                onValueChange={(buyerCode) => setEditForm((f) => ({ ...f, buyerCode }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select C1, C2…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(editForm.buyerCode && !buyerCodes.includes(editForm.buyerCode)
+                    ? [editForm.buyerCode, ...buyerCodes]
+                    : buyerCodes
+                  ).map((code) => (
+                    <SelectItem key={code} value={code}>{code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                className="mt-2 uppercase"
+                placeholder="Or type a new code"
+                value={editForm.buyerCode}
+                onChange={(e) => setEditForm((f) => ({ ...f, buyerCode: e.target.value.toUpperCase() }))}
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLead(null)} disabled={savingEdit}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={savingEdit}>
+              {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={historyDialog.open} onOpenChange={(open) => !open && setHistoryDialog({ open: false, lead: null })}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
