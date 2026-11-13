@@ -260,6 +260,52 @@ export const DYNAMIC_FIELDS: Record<
     { key: 'Diagnosis Date', label: 'Diagnosis Date', type: 'date' },
     { key: 'Has Legal Representation', label: 'Do You Have Legal Representation?', type: 'radio' },
     { key: 'Preferred Contact Method', label: 'What Is Your Preferred Method Of Contact?', type: 'radio' },
+  ],
+
+  /* ───────────────────────── MVA (MOTOR VEHICLE ACCIDENT) ──────── */
+  'MVA': [
+    { key: 'Accident Date', label: 'Date Of Accident', type: 'date', required: true },
+    { key: 'Accident Location', label: 'Accident Location (City / State)', type: 'text', required: true },
+    { key: 'Vehicle Type', label: 'Type Of Accident', type: 'radio', required: true, options: [
+        { label: 'Car', value: 'Car' },
+        { label: 'Truck / Commercial Vehicle', value: 'Truck / Commercial Vehicle' },
+        { label: 'Motorcycle', value: 'Motorcycle' },
+        { label: 'Rideshare', value: 'Rideshare' },
+        { label: 'Pedestrian', value: 'Pedestrian' },
+        { label: 'Bicycle', value: 'Bicycle' },
+        { label: 'Other', value: 'Other' }
+      ]
+    },
+    { key: 'Role In Accident', label: 'Were You The Driver, Passenger, Or Pedestrian?', type: 'radio', required: true, options: [
+        { label: 'Driver', value: 'Driver' },
+        { label: 'Passenger', value: 'Passenger' },
+        { label: 'Pedestrian', value: 'Pedestrian' }
+      ]
+    },
+    { key: 'At Fault', label: 'Was The Other Party At Fault?', type: 'radio', required: true, options: [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' },
+        { label: 'Unsure', value: 'Unsure' }
+      ]
+    },
+    { key: 'Police Report', label: 'Was A Police Report Filed?', type: 'radio', options: [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' }
+      ]
+    },
+    { key: 'Injuries', label: 'Injuries Sustained', type: 'textarea', required: true },
+    { key: 'Medical Treatment', label: 'Received Medical Treatment Within 14 Days?', type: 'radio', required: true, options: [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' }
+      ]
+    },
+    { key: 'Hospital Name', label: 'Hospital / Treating Provider', type: 'text' },
+    { key: 'Other Party Insurance', label: "Other Party's Insurance Company", type: 'text' },
+    { key: 'Attorney', label: 'Are You Currently Represented By An  Attorney?', type: 'radio', required: true, options: [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' }
+      ]
+    }
   ]
 };
 
